@@ -1,0 +1,30 @@
+{
+  "name": "web-component-connectable",
+  "version": "0.1.0",
+  "description": "Web Component library inspired by Nintendo's \"ナビつき！ つくってわかる はじめてゲームプログラミング\".",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/igrep/web-component-connectable.git"
+  },
+  "keywords": [
+    "WebComponents",
+    "TypeScript"
+  ],
+  "author": "YAMAMOTO Yuji",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/igrep/web-component-connectable/issues"
+  },
+  "homepage": "https://github.com/igrep/web-component-connectable#readme",
+  "devDependencies": {
+    "jest": "^27.0.1",
+    "typescript": "^4.3.2"
+  },
+  "dependencies": {
+    "catalyst": "^2.0.0-beta.4"
+  }
+}
