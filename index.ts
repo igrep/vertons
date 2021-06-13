@@ -59,6 +59,8 @@ export class VertonVertex extends HTMLElement {
 
       #inner {
         display: flex;
+        border-top: 5px solid ${this.color};
+        border-bottom: 5px solid ${this.color};
         border-left: 5px solid ${this.color};
         border-right: 5px solid ${this.color};
         border-radius: 10%;
@@ -80,33 +82,22 @@ export class VertonVertex extends HTMLElement {
         color: white;
       }
 
-      #jack-types {
+      #plugs, #jacks {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
       }
-      .between-jacks {
+      #plug-labels, #jack-labels {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        min-height: 1.5em;
       }
       #jack-labels {
-      }
-
-      #plugs {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-around;
+        align-items: flex-start;
       }
       #plug-labels {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-around;
-      }
-      #plugs-left-corner {
-        border-bottom: 5px solid ${this.color};
-        width: 1em;
-      }
-      .between-plugs {
-        border-bottom: 5px solid ${this.color};
-      }
-      #plugs-right-corner {
-        border-bottom: 5px solid ${this.color};
-        width: 1em;
+        align-items: flex-end;
       }
 
       .label {
@@ -152,15 +143,10 @@ export class VertonVertex extends HTMLElement {
     const labels = document.createElement("div");
     labels.id = "jack-labels";
 
-    const leftCorner = document.createElement("div");
-    leftCorner.id = "jacks-left-corner";
-    labels.append(leftCorner);
-
-    const lastIndex = jackContents.length - 1;
-    for (const [i, jack] of jackContents.entries()) {
+    for (const jack of jackContents) {
       const hasType = "type" in jack;
       if (hasType) {
-        //jacksElem.append(VertonJack.build((jack as any).type, this.color));
+        jacksElem.append(VertonJack.build((jack as any).type, this.color));
       }
 
       const hasLabel = "label" in jack;
@@ -171,23 +157,16 @@ export class VertonVertex extends HTMLElement {
         labels.append(labelElem);
       }
 
-      if (i !== lastIndex) {
-        const betweenJacks = document.createElement("div");
-        betweenJacks.className = "between-jacks";
-        labels.append(betweenJacks);
-      }
-
       if (!hasType && !hasLabel) {
         console.error(`Unkown object in jackContents:`, jack);
       }
     }
 
-    const rightCorner = document.createElement("div");
-    rightCorner.id = "jacks-right-corner";
-    labels.append(rightCorner);
+    const labelAndJacks = document.createElement("div");
 
-    inner.append(labels);
-    r.append(jacksElem);
+    labelAndJacks.append(jacksElem);
+    labelAndJacks.append(labels);
+    inner.append(labelAndJacks);
   }
 
   private _appendPlugs(plugContents: VertexContent[], inner: HTMLElement) {
@@ -199,12 +178,7 @@ export class VertonVertex extends HTMLElement {
     const labels = document.createElement("div");
     labels.id = "plug-labels";
 
-    const leftCorner = document.createElement("div");
-    leftCorner.id = "plugs-left-corner";
-    labels.append(leftCorner);
-
-    const lastIndex = plugContents.length - 1;
-    for (const [i, plug] of plugContents.entries()) {
+    for (const plug of plugContents) {
       const hasType = "type" in plug;
       if (hasType) {
         plugsElem.append(VertonPlug.build((plug as any).type, this.color));
@@ -221,17 +195,7 @@ export class VertonVertex extends HTMLElement {
       if (!hasType && !hasLabel) {
         console.error(`Unkown object in plugContents:`, plug);
       }
-
-      if (i !== lastIndex) {
-        const betweenPlugs = document.createElement("div");
-        betweenPlugs.className = "between-plugs";
-        labels.append(betweenPlugs);
-      }
     }
-
-    const rightCorner = document.createElement("div");
-    rightCorner.id = "plugs-right-corner";
-    labels.append(rightCorner);
 
     inner.append(labels);
     r.append(plugsElem);
@@ -261,7 +225,6 @@ export class VertonPlug extends HTMLElement {
     const r = this.shadowRoot!;
 
     const style = document.createElement("style");
-    // Next: draw plug
     style.textContent = `
       :host {
         --main-color: ${color};
@@ -273,6 +236,8 @@ export class VertonPlug extends HTMLElement {
         border-left: 5px solid ${color};
         border-right: 5px solid ${color};
         border-bottom: 5px solid ${color};
+        border-top: 5px solid white; /* TODO: set background color */
+        margin-top: -5px;
       }
       :host([hidden]) {
         display: none;
@@ -293,8 +258,49 @@ customElements.define("verton-plug", VertonPlug);
 export class VertonJack extends HTMLElement {
   constructor() {
     super();
-
     const shadow = this.attachShadow({ mode: "open" });
+    const point = document.createElement("div");
+    point.id = "point";
+    shadow.append(point);
+  }
+
+  static build(type: string, color: string): VertonJack {
+    const o = new this();
+    o.dataset.type = type;
+    o._setStyle(color);
+
+    return o;
+  }
+
+  private _setStyle(color: string) {
+    const r = this.shadowRoot!;
+
+    const style = document.createElement("style");
+    style.textContent = `
+      :host {
+        --main-color: ${color};
+        display: flex;
+        justify-content: center;
+        width: 1.3em;
+        height: 0.65em;
+        border-radius: 0 0 1.3em 1.3em;
+        border-left: 5px solid ${color};
+        border-right: 5px solid ${color};
+        border-bottom: 5px solid ${color};
+        border-top: 5px solid white; /* TODO: set background color */
+        margin-top: -5px;
+      }
+      :host([hidden]) {
+        display: none;
+      }
+      #point {
+        width: 0.4em;
+        height: 0.4em;
+        border-radius: 0.5em;
+        background-color: ${color};
+      }
+    `;
+    r.append(style);
   }
 }
 
@@ -323,7 +329,7 @@ customElements.define("verton-object", VertonObject);
 const track = document.getElementsByTagName("verton-track")[0] as VertonTrack;
 
 track.addVertex({
-  header: "クリックしたら",
+  header: "クリック",
   plugContents: [
     { label: "X座標", type: "number" },
     { label: "Y座標", type: "number" },
