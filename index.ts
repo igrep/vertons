@@ -20,9 +20,38 @@ export class VertonGarage extends HTMLElement {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: space-around;
+
+        min-height: 1000px;
       }
     `;
     shadow.appendChild(style);
+
+    let vertex: VertonVertex;
+    this.addEventListener("dragstart", (e) => {
+      e.dataTransfer!.effectAllowed = "move";
+      e.dataTransfer!.setData("text/plain", "");
+
+      vertex = e.target as VertonVertex;
+      vertex.style.left = `${e.clientX}px`;
+      vertex.style.top = `${e.clientY}px`;
+    });
+
+    this.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      vertex.style.left = `${e.clientX}px`;
+      vertex.style.top = `${e.clientY}px`;
+    });
+
+    this.addEventListener("dragend", (e) => {
+      vertex.style.left = `${e.clientX}px`;
+      vertex.style.top = `${e.clientY}px`;
+    });
+
+    this.addEventListener("drop", (e) => {
+      e.stopPropagation();
+      vertex.style.left = `${e.clientX}px`;
+      vertex.style.top = `${e.clientY}px`;
+    });
   }
 
   addVertex(spec: VertexSpec): void {
@@ -45,6 +74,12 @@ export class VertonVertex extends HTMLElement {
     const shadow = this.attachShadow({ mode: "open" });
     const style = document.createElement("style");
 
+    this.addEventListener("drag", (e) => {
+      this.style.left = `${e.clientX}px`;
+      this.style.top = `${e.clientY}px`;
+    });
+    this.setAttribute("draggable", "true");
+
     this.color = "red";
 
     style.textContent = `
@@ -52,6 +87,7 @@ export class VertonVertex extends HTMLElement {
         display: flex;
         flex-direction: row;
         flex-wrap: nowrap;
+        position: absolute;
 
         --height: 15em;
         --width: 17em;
