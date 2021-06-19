@@ -2,6 +2,15 @@ type VertexSpec = {
   header: string;
   plugContents?: VertexContent[];
   jackContents?: VertexContent[];
+  colors?: Partial<Colors>;
+};
+
+type Colors = {
+  window: string;
+  label: string;
+  header: string;
+  point: string;
+  background: string;
 };
 
 type VertexContent = { label: string } | { type: ValueType; label?: string };
@@ -27,7 +36,7 @@ export class VertonGarage extends HTMLElement {
 
   addVertex(spec: VertexSpec): void {
     const specFilled = Object.assign(
-      { plugContents: [], jackContents: [] },
+      { plugContents: [], jackContents: [], colors: {} },
       spec
     );
     this.shadowRoot!.append(VertonVertex.build(specFilled));
@@ -37,8 +46,6 @@ export class VertonGarage extends HTMLElement {
 customElements.define("verton-garage", VertonGarage);
 
 export class VertonVertex extends HTMLElement {
-  readonly color: string;
-
   private _dragging = false;
   x: number;
   y: number;
@@ -53,37 +60,19 @@ export class VertonVertex extends HTMLElement {
     const shadow = this.attachShadow({ mode: "open" });
     const style = document.createElement("style");
 
-    this.addEventListener(
-      "selectstart",
-      (e) => {
-        e.preventDefault();
-        return false;
-      },
-      { capture: true }
-    );
-    this.addEventListener(
-      "pointerdown",
-      (e) => {
-        this._onPointerDown(e);
-      },
-      { capture: true }
-    );
-    this.addEventListener(
-      "pointermove",
-      (e) => {
-        this._onPointerMove(e);
-      },
-      { capture: true }
-    );
-    this.addEventListener(
-      "pointerup",
-      (e) => {
-        this._onPointerUp(e);
-      },
-      { capture: true }
-    );
-
-    this.color = "red";
+    this.addEventListener("selectstart", (e) => {
+      e.preventDefault();
+      return false;
+    });
+    this.addEventListener("pointerdown", (e) => {
+      this._onPointerDown(e);
+    });
+    this.addEventListener("pointermove", (e) => {
+      this._onPointerMove(e);
+    });
+    this.addEventListener("pointerup", (e) => {
+      this._onPointerUp(e);
+    });
 
     style.textContent = `
       :host {
@@ -96,17 +85,24 @@ export class VertonVertex extends HTMLElement {
         --width: 17em;
         --header-height: 1.6em;
 
+        --color-window: red;
+        --color-label: red;
+        --color-header: white;
+        --color-point: #C00;
+        --color-background: white;
+
         min-height: var(--height);
         min-width: var(--width);
       }
       :host([hidden]) { display: none; }
 
       #inner {
-        border-top: 5px solid ${this.color};
-        border-bottom: 5px solid ${this.color};
-        border-left: 5px solid ${this.color};
-        border-right: 5px solid ${this.color};
+        border-top: 5px solid var(--color-window);
+        border-bottom: 5px solid var(--color-window);
+        border-left: 5px solid var(--color-window);
+        border-right: 5px solid var(--color-window);
         border-radius: 15px;
+        background-color: var(--color-background);
 
         display: flex;
         flex-direction: column;
@@ -118,13 +114,13 @@ export class VertonVertex extends HTMLElement {
       }
 
       #header {
-        background-color: ${this.color};
+        background-color: var(--color-window);
         border-radius: 7px 7px 0 0;
         text-align: left;
         transform: scale(101%, 103%);
         font-size: var(--header-height);
         font-weight: bold;
-        color: white;
+        color: var(--color-header);
       }
 
       #upper-right-corner {
@@ -165,22 +161,20 @@ export class VertonVertex extends HTMLElement {
       #plug-labels { align-items: flex-end; }
 
       .label {
-        /* TODO: Darken a little */
-        color: ${this.color};
+        color: var(--color-label);
         font-weight: bold;
         padding: 0 0.5em;
       }
 
       .jack-or-plug {
-        --main-color: ${this.color};
         display: flex;
         flex-direction: column;
         justify-content: center;
         width: 0.65em;
         height: 1.3em;
         border-radius: 0 1.3em 1.3em 0;
-        border: 5px solid  ${this.color};
-        border-left: 6px solid white; /* TODO: set background color */
+        border: 5px solid var(--color-window);
+        border-left: 6px solid var(--color-background);
         margin-left: -5px;
       }
 
@@ -188,7 +182,7 @@ export class VertonVertex extends HTMLElement {
         width: 0.4em;
         height: 0.4em;
         border-radius: 0.5em;
-        background-color: ${this.color};
+        background-color: var(--color-point);
       }
     `;
     shadow.appendChild(style);
@@ -229,9 +223,12 @@ export class VertonVertex extends HTMLElement {
     header,
     plugContents,
     jackContents,
+    colors,
   }: Required<VertexSpec>): VertonVertex {
     const obj = new this();
     const r = obj.shadowRoot!;
+
+    obj.setColors(colors);
 
     const inner = document.createElement("div");
     inner.id = "inner";
@@ -252,6 +249,23 @@ export class VertonVertex extends HTMLElement {
     obj._appendPlugs(plugContents, jacksJackLabelsPlugLabels);
 
     return obj;
+  }
+  setColors(colors: Partial<Colors>) {
+    if (colors.window) {
+      this.style.setProperty("--color-window", colors.window);
+    }
+    if (colors.label) {
+      this.style.setProperty("--color-label", colors.label);
+    }
+    if (colors.header) {
+      this.style.setProperty("--color-header", colors.header);
+    }
+    if (colors.point) {
+      this.style.setProperty("--color-point", colors.point);
+    }
+    if (colors.background) {
+      this.style.setProperty("--color-background", colors.background);
+    }
   }
 
   private _appendJacks(jackContents: VertexContent[], inner: HTMLDivElement) {
@@ -383,6 +397,7 @@ garage.addVertex({
   header: "足し算",
   jackContents: [{ type: "number" }, { label: "+" }, { type: "number" }],
   plugContents: [{ label: "=" }, { type: "number" }],
+  colors: { window: "#00D097" },
 });
 
 garage.addVertex({
@@ -393,4 +408,5 @@ garage.addVertex({
     { label: "Y座標" },
     { type: "number" },
   ],
+  colors: { window: "#E37F4B" },
 });
