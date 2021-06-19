@@ -99,9 +99,7 @@ export class VertonVertex extends HTMLElement {
         min-height: var(--height);
         min-width: var(--width);
       }
-      :host([hidden]) {
-        display: none;
-      }
+      :host([hidden]) { display: none; }
 
       #inner {
         border-top: 5px solid ${this.color};
@@ -156,27 +154,41 @@ export class VertonVertex extends HTMLElement {
         flex-direction: column;
         justify-content: space-around;
       }
-      #plugs {
-        flex-grow: 1;
-      }
+      #plugs { flex-grow: 1; }
       #jack-labels, #plug-labels {
         display: flex;
         flex-direction: column;
         justify-content: space-around;
         min-width: 1.5em;
       }
-      #jack-labels {
-        align-items: flex-start;
-      }
-      #plug-labels {
-        align-items: flex-end;
-      }
+      #jack-labels { align-items: flex-start; }
+      #plug-labels { align-items: flex-end; }
 
       .label {
         /* TODO: Darken a little */
         color: ${this.color};
         font-weight: bold;
         padding: 0 0.5em;
+      }
+
+      .jack-or-plug {
+        --main-color: ${this.color};
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 0.65em;
+        height: 1.3em;
+        border-radius: 0 1.3em 1.3em 0;
+        border: 5px solid  ${this.color};
+        border-left: 6px solid white; /* TODO: set background color */
+        margin-left: -5px;
+      }
+
+      .jack-or-plug-point {
+        width: 0.4em;
+        height: 0.4em;
+        border-radius: 0.5em;
+        background-color: ${this.color};
       }
     `;
     shadow.appendChild(style);
@@ -252,7 +264,7 @@ export class VertonVertex extends HTMLElement {
     for (const jack of jackContents) {
       const hasType = "type" in jack;
       if (hasType) {
-        jacksElem.append(VertonJack.build((jack as any).type, this.color));
+        jacksElem.append(JackOrPlug.build((jack as any).type));
       }
 
       const hasLabel = "label" in jack;
@@ -296,7 +308,7 @@ export class VertonVertex extends HTMLElement {
     for (const plug of plugContents) {
       const hasType = "type" in plug;
       if (hasType) {
-        plugsElem.append(VertonPlug.build((plug as any).type, this.color));
+        plugsElem.append(JackOrPlug.build((plug as any).type));
       }
 
       const hasLabel = "label" in plug;
@@ -320,105 +332,20 @@ export class VertonVertex extends HTMLElement {
 
 customElements.define("verton-vertex", VertonVertex);
 
-export class VertonPlug extends HTMLElement {
-  constructor() {
-    super();
-    const shadow = this.attachShadow({ mode: "open" });
+namespace JackOrPlug {
+  export function build(type: string): HTMLElement {
+    const e = document.createElement("div");
+    e.className = "jack-or-plug";
+    e.dataset.type = type;
+
     const point = document.createElement("div");
-    point.id = "point";
-    shadow.append(point);
-  }
+    point.className = "jack-or-plug-point";
 
-  static build(type: string, color: string): VertonPlug {
-    const o = new this();
-    o.dataset.type = type;
-    o._setStyle(color);
+    e.append(point);
 
-    return o;
-  }
-
-  private _setStyle(color: string) {
-    const r = this.shadowRoot!;
-
-    const style = document.createElement("style");
-    style.textContent = `
-      :host {
-        --main-color: ${color};
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        width: 0.65em;
-        height: 1.3em;
-        border-radius: 0 1.3em 1.3em 0;
-        border: 5px solid  ${color};
-        border-left: 6px solid white; /* TODO: set background color */
-        margin-left: -5px;
-      }
-      :host([hidden]) {
-        display: none;
-      }
-      #point {
-        width: 0.4em;
-        height: 0.4em;
-        border-radius: 0.5em;
-        background-color: ${color};
-      }
-    `;
-    r.append(style);
+    return e;
   }
 }
-
-customElements.define("verton-plug", VertonPlug);
-
-export class VertonJack extends HTMLElement {
-  constructor() {
-    super();
-    const shadow = this.attachShadow({ mode: "open" });
-    const point = document.createElement("div");
-    point.id = "point";
-    shadow.append(point);
-  }
-
-  static build(type: string, color: string): VertonJack {
-    const o = new this();
-    o.dataset.type = type;
-    o._setStyle(color);
-
-    return o;
-  }
-
-  private _setStyle(color: string) {
-    const r = this.shadowRoot!;
-
-    const style = document.createElement("style");
-    style.textContent = `
-      :host {
-        --main-color: ${color};
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        width: 0.65em;
-        height: 1.3em;
-        border-radius: 0 1.3em 1.3em 0;
-        border: 5px solid  ${color};
-        border-left: 6px solid white; /* TODO: set background color */
-        margin-left: -5px;
-      }
-      :host([hidden]) {
-        display: none;
-      }
-      #point {
-        width: 0.4em;
-        height: 0.4em;
-        border-radius: 0.5em;
-        background-color: ${color};
-      }
-    `;
-    r.append(style);
-  }
-}
-
-customElements.define("verton-jack", VertonJack);
 
 export class VertonStage extends HTMLElement {
   constructor() {
