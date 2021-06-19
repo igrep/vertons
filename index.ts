@@ -60,10 +60,6 @@ export class VertonVertex extends HTMLElement {
     const shadow = this.attachShadow({ mode: "open" });
     const style = document.createElement("style");
 
-    this.addEventListener("selectstart", (e) => {
-      e.preventDefault();
-      return false;
-    });
     this.addEventListener("pointerdown", (e) => {
       this._onPointerDown(e);
     });
