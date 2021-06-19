@@ -39,11 +39,49 @@ customElements.define("verton-garage", VertonGarage);
 export class VertonVertex extends HTMLElement {
   readonly color: string;
 
+  private _dragging = false;
+  x: number;
+  y: number;
+
   constructor() {
     super();
 
+    const rect = this.getBoundingClientRect();
+    this.x = rect.left;
+    this.y = rect.top;
+
     const shadow = this.attachShadow({ mode: "open" });
     const style = document.createElement("style");
+
+    this.addEventListener(
+      "selectstart",
+      (e) => {
+        e.preventDefault();
+        return false;
+      },
+      { capture: true }
+    );
+    this.addEventListener(
+      "pointerdown",
+      (e) => {
+        this._onPointerDown(e);
+      },
+      { capture: true }
+    );
+    this.addEventListener(
+      "pointermove",
+      (e) => {
+        this._onPointerMove(e);
+      },
+      { capture: true }
+    );
+    this.addEventListener(
+      "pointerup",
+      (e) => {
+        this._onPointerUp(e);
+      },
+      { capture: true }
+    );
 
     this.color = "red";
 
@@ -52,6 +90,7 @@ export class VertonVertex extends HTMLElement {
         display: flex;
         flex-direction: row;
         flex-wrap: nowrap;
+        position: absolute;
 
         --height: 15em;
         --width: 17em;
@@ -141,6 +180,37 @@ export class VertonVertex extends HTMLElement {
       }
     `;
     shadow.appendChild(style);
+  }
+
+  private _onPointerDown(e: PointerEvent) {
+    e.preventDefault();
+    this._dragging = true;
+    this.setPointerCapture(e.pointerId);
+
+    this.x = e.clientX;
+    this.y = e.clientY;
+  }
+
+  private _onPointerMove(e: PointerEvent) {
+    e.preventDefault();
+    if (!this._dragging) {
+      return;
+    }
+
+    const newX = e.clientX;
+    const newY = e.clientY;
+    const dx = newX - this.x;
+    const dy = newY - this.y;
+    this.x = newX;
+    this.y = newY;
+
+    this.style.left = `${this.offsetLeft + dx}px`;
+    this.style.top = `${this.offsetTop + dy}px`;
+  }
+
+  private _onPointerUp(e: PointerEvent) {
+    this._dragging = false;
+    this.releasePointerCapture(e.pointerId);
   }
 
   static build({
