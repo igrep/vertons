@@ -191,8 +191,8 @@ export namespace Edge {
   }
 
   export function connectTo(edge: Type, { vertexId, jackName }: JackId) {
-    edge.dataset.fromVertexId = vertexId.toString();
-    edge.dataset.fromJackId = jackName;
+    edge.dataset.toVertexId = vertexId.toString();
+    edge.dataset.toJackId = jackName;
   }
 
   // Public only for testing
