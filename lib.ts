@@ -16,7 +16,7 @@ type Colors = {
 
 type CurrentlyDrawing = {
   edge: Edge.Type;
-  from: ElementPosition;
+  from: Point;
 };
 
 type VertexId = number;
@@ -33,8 +33,13 @@ type ClientPointer = {
 };
 
 type ElementPosition = {
-  top: number;
   left: number;
+  top: number;
+};
+
+type Point = {
+  x: number;
+  y: number;
 };
 
 type LabelContent = { label: string };
@@ -85,8 +90,12 @@ export class VertonGarage extends HTMLElement {
         return;
       }
       e.preventDefault();
-      const p = { clientX: e.clientX, clientY: e.clientY };
-      Edge.moveTo(this._currentlyDrawing, p);
+      const p1 = this._currentlyDrawing.from;
+      const p2 = {
+        x: e.clientX,
+        y: e.clientY,
+      };
+      Edge.moveTo(this._currentlyDrawing.edge, p1, p2);
     });
   }
 
@@ -102,7 +111,7 @@ export class VertonGarage extends HTMLElement {
 
   startDrawingEdge(
     from: PlugId,
-    centerOfPlug: ElementPosition,
+    centerOfPlug: Point,
     clickedPoint: ClientPointer
   ) {
     const edge = Edge.create(from, centerOfPlug, clickedPoint);
@@ -114,7 +123,12 @@ export class VertonGarage extends HTMLElement {
     if (this._currentlyDrawing === undefined) {
       return;
     }
-    Edge.moveTo(this._currentlyDrawing, p);
+    const p1 = this._currentlyDrawing.from;
+    const p2 = {
+      x: p.clientX,
+      y: p.clientY,
+    };
+    Edge.moveTo(this._currentlyDrawing.edge, p1, p2);
     Edge.connectTo(this._currentlyDrawing.edge, to);
     this._currentlyDrawing = undefined;
   }
@@ -133,13 +147,19 @@ export namespace Edge {
 
   export function create(
     { vertexId, plugName }: PlugId,
-    centerOfPlug: ElementPosition,
-    clickedPoint: ClientPointer
+    centerOfPlug: Point,
+    { clientX, clientY }: ClientPointer
   ): Type {
-    const { top, left, width, height, x1, y1, x2, y2 } = calcEdgeDef(
-      centerOfPlug,
-      clickedPoint
-    );
+    const {
+      top,
+      left,
+      width,
+      height,
+      x1,
+      y1,
+      x2,
+      y2,
+    } = calcEdgeDef(centerOfPlug, { x: clientX, y: clientY });
 
     const edge = document.createElementNS(SVG_NS, "svg");
     edge.classList.add("edge");
@@ -161,21 +181,8 @@ export namespace Edge {
     return edge;
   }
 
-  export function moveTo(
-    currentlyDrawing: CurrentlyDrawing,
-    { clientX, clientY }: ClientPointer
-  ) {
-    const { edge, from: centerOfPlug } = currentlyDrawing;
-    const {
-      top,
-      left,
-      width,
-      height,
-      x1,
-      y1,
-      x2,
-      y2,
-    } = calcEdgeDef(centerOfPlug, { clientX, clientY });
+  export function moveTo(edge: Edge.Type, p1: Point, p2: Point) {
+    const { top, left, width, height, x1, y1, x2, y2 } = calcEdgeDef(p1, p2);
 
     edge.style.left = `${left}px`;
     edge.style.top = `${top}px`;
@@ -197,8 +204,8 @@ export namespace Edge {
 
   // Public only for testing
   export function calcEdgeDef(
-    centerOfPlug: ElementPosition,
-    { clientX, clientY }: ClientPointer
+    p1: Point,
+    p2: Point
   ): {
     top: number;
     left: number;
@@ -209,106 +216,127 @@ export namespace Edge {
     x2: number;
     y2: number;
   } {
-    if (clientX > centerOfPlug.left) {
-      if (clientY > centerOfPlug.top) {
+    if (p2.x > p1.x) {
+      if (p2.y > p1.y) {
         return {
-          left: centerOfPlug.left,
-          top: centerOfPlug.top,
+          left: p1.x,
+          top: p1.y,
           x1: 0,
           y1: 0,
-          x2: clientX - centerOfPlug.left,
-          y2: clientY - centerOfPlug.top,
-          width: clientX - centerOfPlug.left,
-          height: clientY - centerOfPlug.top,
+          x2: p2.x - p1.x,
+          y2: p2.y - p1.y,
+          width: p2.x - p1.x,
+          height: p2.y - p1.y,
         };
-      } else if (clientY == centerOfPlug.top) {
+      } else if (p2.y == p1.y) {
         return {
-          left: centerOfPlug.left,
-          top: clientY,
+          left: p1.x,
+          top: p2.y,
           x1: 0,
           y1: 2,
-          x2: clientX - centerOfPlug.left,
+          x2: p2.x - p1.x,
           y2: 2,
-          width: clientX - centerOfPlug.left,
+          width: p2.x - p1.x,
           height: 3,
         };
       } else {
         return {
-          left: centerOfPlug.left,
-          top: clientY,
+          left: p1.x,
+          top: p2.y,
           x1: 0,
-          y1: centerOfPlug.top - clientY,
-          x2: clientX - centerOfPlug.left,
+          y1: p1.y - p2.y,
+          x2: p2.x - p1.x,
           y2: 0,
-          width: clientX - centerOfPlug.left,
-          height: centerOfPlug.top - clientY,
+          width: p2.x - p1.x,
+          height: p1.y - p2.y,
         };
       }
-    } else if (clientX == centerOfPlug.left) {
-      if (clientY > centerOfPlug.top) {
+    } else if (p2.x == p1.x) {
+      if (p2.y > p1.y) {
         return {
-          left: centerOfPlug.left,
-          top: centerOfPlug.top,
+          left: p1.x,
+          top: p1.y,
           x1: 2,
           y1: 0,
           x2: 2,
-          y2: clientY - centerOfPlug.top,
+          y2: p2.y - p1.y,
           width: 3,
-          height: clientY - centerOfPlug.top,
+          height: p2.y - p1.y,
         };
       } else {
         return {
-          left: clientX,
-          top: clientY,
+          left: p2.x,
+          top: p2.y,
           x1: 2,
           y1: 0,
           x2: 2,
-          y2: centerOfPlug.top - clientY,
+          y2: p1.y - p2.y,
           width: 3,
-          height: centerOfPlug.top - clientY,
+          height: p1.y - p2.y,
         };
       }
     } else {
-      if (clientY > centerOfPlug.top) {
+      if (p2.y > p1.y) {
         return {
-          left: clientX,
-          top: centerOfPlug.top,
-          x1: centerOfPlug.left - clientX,
+          left: p2.x,
+          top: p1.y,
+          x1: p1.x - p2.x,
           y1: 0,
           x2: 0,
-          y2: clientY - centerOfPlug.top,
-          width: centerOfPlug.left - clientX,
-          height: clientY - centerOfPlug.top,
+          y2: p2.y - p1.y,
+          width: p1.x - p2.x,
+          height: p2.y - p1.y,
         };
-      } else if (clientY == centerOfPlug.top) {
+      } else if (p2.y == p1.y) {
         return {
-          left: clientX,
-          top: centerOfPlug.top,
+          left: p2.x,
+          top: p1.y,
           x1: 0,
           y1: 2,
-          x2: centerOfPlug.left - clientX,
+          x2: p1.x - p2.x,
           y2: 2,
-          width: centerOfPlug.left - clientX,
+          width: p1.x - p2.x,
           height: 3,
         };
       } else {
         return {
-          left: clientX,
-          top: clientY,
+          left: p2.x,
+          top: p2.y,
           x1: 0,
           y1: 0,
-          x2: centerOfPlug.left - clientX,
-          y2: centerOfPlug.top - clientY,
-          width: centerOfPlug.left - clientX,
-          height: centerOfPlug.top - clientY,
+          x2: p1.x - p2.x,
+          y2: p1.y - p2.y,
+          width: p1.x - p2.x,
+          height: p1.y - p2.y,
         };
       }
     }
+  }
+
+  export function findPlugWith(
+    garageRoot: ShadowRoot,
+    edge: Type
+  ): Plug.Type | undefined {
+    const vertex = garageRoot.querySelector(
+      `[data-vertex-id="${edge.dataset.fromVertexId}"]`
+    ) as VertonVertex | null;
+    return vertex?.findPlugOf(edge.dataset.fromPlugId!);
+  }
+
+  export function findJackWith(
+    garageRoot: ShadowRoot,
+    edge: Type
+  ): Jack.Type | undefined {
+    const vertex = garageRoot.querySelector(
+      `[data-vertex-id="${edge.dataset.toVertexId}"]`
+    ) as VertonVertex | null;
+    return vertex?.findJackOf(edge.dataset.toJackId!);
   }
 }
 
 export class VertonVertex extends HTMLElement {
   private _dragging = false;
+  private _garage: VertonGarage | undefined = undefined;
   x: number;
   y: number;
 
@@ -470,6 +498,9 @@ export class VertonVertex extends HTMLElement {
 
     this.style.left = `${this.offsetLeft + dx}px`;
     this.style.top = `${this.offsetTop + dy}px`;
+
+    this._moveEdgesWithPlugs();
+    this._moveEdgesWithJacks();
   }
 
   private _onPointerUp(e: PointerEvent) {
@@ -484,6 +515,7 @@ export class VertonVertex extends HTMLElement {
   ): VertonVertex {
     const obj = new this();
     const r = obj.shadowRoot!;
+    obj._garage = garage;
 
     obj.setColors(colors);
 
@@ -499,6 +531,8 @@ export class VertonVertex extends HTMLElement {
     jacksJackLabelsPlugLabels.id = "jacks-jack-labels-plug-labels";
     inner.append(jacksJackLabelsPlugLabels);
 
+    obj.dataset.vertexId = vertexId.toString();
+
     obj._appendJacks(vertexId, jackContents, jacksJackLabelsPlugLabels, garage);
 
     r.append(inner);
@@ -507,6 +541,7 @@ export class VertonVertex extends HTMLElement {
 
     return obj;
   }
+
   setColors(colors: Partial<Colors>) {
     if (colors.window) {
       this.style.setProperty("--color-window", colors.window);
@@ -523,6 +558,16 @@ export class VertonVertex extends HTMLElement {
     if (colors.background) {
       this.style.setProperty("--color-background", colors.background);
     }
+  }
+
+  findPlugOf(plugId: string): Plug.Type | undefined {
+    const result = this.shadowRoot!.querySelector(`[data-plug-id="${plugId}"]`);
+    return result as Plug.Type | undefined;
+  }
+
+  findJackOf(jackId: string): Jack.Type | undefined {
+    const result = this.shadowRoot!.querySelector(`[data-jack-id="${jackId}"]`);
+    return result as Jack.Type | undefined;
   }
 
   private _appendJacks(
@@ -613,11 +658,61 @@ export class VertonVertex extends HTMLElement {
 
     r.append(plugsOuter);
   }
+
+  private _moveEdgesWithPlugs() {
+    const garageRoot = this._garage!.shadowRoot!;
+    const plugs = Array.from(
+      this.shadowRoot!.getElementById("plugs")!.children
+    );
+    for (const plug_ of plugs) {
+      const plug = plug_ as Plug.Type;
+      const centerOfPlug = JackOrPlug.centerOf(plug);
+      const selector = `[data-from-vertex-id="${this.dataset.vertexId}"][data-from-plug-id="${plug.dataset.plugId}"]`;
+      for (const edge_ of Array.from(garageRoot.querySelectorAll(selector))) {
+        const edge = edge_ as Edge.Type;
+        const jack = Edge.findJackWith(garageRoot, edge);
+        if (!jack) {
+          console.error(
+            `Could not find a jack with ${edge.dataset.toVertexId} ${edge.dataset.toJackId}`
+          );
+          continue;
+        }
+        const centerOfJack = JackOrPlug.centerOf(jack);
+        Edge.moveTo(edge, centerOfPlug, centerOfJack);
+      }
+    }
+  }
+
+  // TODO: Refactor?
+  private _moveEdgesWithJacks() {
+    const garageRoot = this._garage!.shadowRoot!;
+    const jacks = Array.from(
+      this.shadowRoot!.getElementById("jacks")!.children
+    );
+    for (const jack_ of jacks) {
+      const jack = jack_ as Jack.Type;
+      const centerOfJack = JackOrPlug.centerOf(jack);
+      const selector = `[data-to-vertex-id="${this.dataset.vertexId}"][data-to-jack-id="${jack.dataset.jackId}"]`;
+      for (const edge_ of Array.from(garageRoot.querySelectorAll(selector))) {
+        const edge = edge_ as Edge.Type;
+        const plug = Edge.findPlugWith(garageRoot, edge);
+        if (!plug) {
+          console.error(
+            `Could not find a plug with ${edge.dataset.toVertexId} ${edge.dataset.toPlugId}`
+          );
+          continue;
+        }
+        const centerOfPlug = JackOrPlug.centerOf(plug);
+        Edge.moveTo(edge, centerOfJack, centerOfPlug);
+      }
+    }
+  }
 }
 
 componentClasses["verton-vertex"] = VertonVertex;
 
 namespace JackOrPlug {
+  // TODO: remove vertexId if unnecessary
   export function build(vertexId: VertexId): HTMLElement {
     const elem = document.createElement("div");
     elem.className = "jack-or-plug";
@@ -629,25 +724,27 @@ namespace JackOrPlug {
 
     return elem;
   }
+
+  export function centerOf(elem: HTMLElement): Point {
+    const rect = elem.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  }
 }
 
 namespace Plug {
-  export function build(id: PlugId, garage: VertonGarage): HTMLElement {
+  export type Type = HTMLElement;
+
+  export function build(id: PlugId, garage: VertonGarage): Type {
     const elem = JackOrPlug.build(id.vertexId);
     elem.dataset.plugId = id.plugName.toString();
 
     elem.addEventListener("pointerdown", (e) => {
       e.stopPropagation();
-      const rect = elem.getBoundingClientRect();
-      const centerOfPlug = {
-        left: rect.left + rect.width / 2,
-        top: rect.top + rect.height / 2,
-      };
-      const clickedPoint = {
-        clientX: e.clientX,
-        clientY: e.clientY,
-      };
-      garage.startDrawingEdge(id, centerOfPlug, clickedPoint);
+      const centerOfPlug = JackOrPlug.centerOf(elem);
+      garage.startDrawingEdge(id, centerOfPlug, e);
     });
 
     return elem;
@@ -655,7 +752,9 @@ namespace Plug {
 }
 
 namespace Jack {
-  export function build(id: JackId, garage: VertonGarage): HTMLElement {
+  export type Type = HTMLElement;
+
+  export function build(id: JackId, garage: VertonGarage): Type {
     const elem = JackOrPlug.build(id.vertexId);
     elem.dataset.jackId = id.jackName;
 

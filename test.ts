@@ -12,8 +12,8 @@ describe("Edge.calcEdgeDef", () => {
         fc.nat(),
         (top_, left_, clientY, clientX) => {
           const { top, left, width, height, x1, y1, x2, y2 } = Edge.calcEdgeDef(
-            { top: top_, left: left_ },
-            { clientY, clientX }
+            { y: top_, x: left_ },
+            { y: clientY, x: clientX }
           );
           expect(top).toBeGreaterThanOrEqual(0);
           expect(left).toBeGreaterThanOrEqual(0);
@@ -42,8 +42,8 @@ describe("Edge.calcEdgeDef", () => {
             const clientY = top === clientY_ ? clientY_ + 1 : clientY_;
             const clientX = left === clientX_ ? clientX_ + 1 : clientX_;
             const { x1, y1, x2, y2 } = Edge.calcEdgeDef(
-              { top, left },
-              { clientY, clientX }
+              { y: top, x: left },
+              { y: clientY, x: clientX }
             );
             const dx = Math.abs(clientX - left);
             const dy = Math.abs(clientY - top);
@@ -75,20 +75,20 @@ describe("Edge.calcEdgeDef", () => {
             const left_ = left0 + 1;
             const clientY = top_ === clientY_ ? clientY_ + 1 : clientY_;
             const clientX = left_ === clientX_ ? clientX_ + 1 : clientX_;
-            const centerOfPlug = { top: top_, left: left_ };
+            const centerOfPlug = { y: top_, x: left_ };
 
             const { top, left } = Edge.calcEdgeDef(centerOfPlug, {
-              clientY,
-              clientX,
+              y: clientY,
+              x: clientX,
             });
-            if (!(top === centerOfPlug.top || top === clientY)) {
+            if (!(top === centerOfPlug.y || top === clientY)) {
               throw new Error(
-                `top is neither ${centerOfPlug.top} nor ${clientY}, but ${top} actually`
+                `top is neither ${centerOfPlug.y} nor ${clientY}, but ${top} actually`
               );
             }
-            if (!(left === centerOfPlug.left || left === clientX)) {
+            if (!(left === centerOfPlug.x || left === clientX)) {
               throw new Error(
-                `left is neither ${centerOfPlug.left} nor ${clientX}, but ${left} actually`
+                `left is neither ${centerOfPlug.x} nor ${clientX}, but ${left} actually`
               );
             }
           }
@@ -109,8 +109,8 @@ describe("Edge.calcEdgeDef", () => {
             const clientX = left === clientX_ ? clientX_ + 1 : clientX_;
 
             const { height, width } = Edge.calcEdgeDef(
-              { top, left },
-              { clientY, clientX }
+              { y: top, x: left },
+              { y: clientY, x: clientX }
             );
             expect(height).toBe(Math.abs(clientY - top));
             expect(width).toBe(Math.abs(clientX - left));
