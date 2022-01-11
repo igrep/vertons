@@ -97,6 +97,10 @@ export class VertonGarage extends HTMLElement {
       };
       Edge.moveTo(this._currentlyDrawing.edge, p1, p2);
     });
+
+    this.addEventListener("pointerdown", () => {
+      this.cancelDrawingEdge();
+    });
   }
 
   addVertex(spec: VertexView): void {
@@ -130,6 +134,14 @@ export class VertonGarage extends HTMLElement {
     };
     Edge.moveTo(this._currentlyDrawing.edge, p1, p2);
     Edge.connectTo(this._currentlyDrawing.edge, to);
+    this._currentlyDrawing = undefined;
+  }
+
+  cancelDrawingEdge() {
+    if (this._currentlyDrawing === undefined) {
+      return;
+    }
+    this.shadowRoot!.removeChild(this._currentlyDrawing.edge);
     this._currentlyDrawing = undefined;
   }
 
