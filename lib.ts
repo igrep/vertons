@@ -712,11 +712,9 @@ export class VertonVertex extends HTMLElement {
 componentClasses["verton-vertex"] = VertonVertex;
 
 namespace JackOrPlug {
-  // TODO: remove vertexId if unnecessary
-  export function build(vertexId: VertexId): HTMLElement {
+  export function build(): HTMLElement {
     const elem = document.createElement("div");
     elem.className = "jack-or-plug";
-    elem.dataset.vertexId = vertexId.toString();
 
     const point = document.createElement("div");
     point.className = "jack-or-plug-point";
@@ -738,7 +736,7 @@ namespace Plug {
   export type Type = HTMLElement;
 
   export function build(id: PlugId, garage: VertonGarage): Type {
-    const elem = JackOrPlug.build(id.vertexId);
+    const elem = JackOrPlug.build();
     elem.dataset.plugId = id.plugName.toString();
 
     elem.addEventListener("pointerdown", (e) => {
@@ -755,7 +753,7 @@ namespace Jack {
   export type Type = HTMLElement;
 
   export function build(id: JackId, garage: VertonGarage): Type {
-    const elem = JackOrPlug.build(id.vertexId);
+    const elem = JackOrPlug.build();
     elem.dataset.jackId = id.jackName;
 
     elem.addEventListener("pointerup", (e) => {
