@@ -27,14 +27,9 @@ type PlugName = string;
 type JackId = { vertexId: VertexId; jackName: JackName };
 type PlugId = { vertexId: VertexId; plugName: PlugName };
 
-type ClientPointer = {
-  clientX: number;
-  clientY: number;
-};
-
-type ElementPosition = {
-  left: number;
-  top: number;
+type PagePointer = {
+  pageX: number;
+  pageY: number;
 };
 
 type Point = {
@@ -57,7 +52,6 @@ const componentClasses: { [elementName: string]: { new (): HTMLElement } } = {};
 export class VertonGarage extends HTMLElement {
   private _lastVertexId: VertexId = 0;
   private _currentlyDrawing: CurrentlyDrawing | undefined = undefined;
-  readonly garagePosition: ElementPosition;
 
   constructor() {
     super();
@@ -79,12 +73,6 @@ export class VertonGarage extends HTMLElement {
     `;
     shadow.appendChild(style);
 
-    const rect = this.getBoundingClientRect();
-    this.garagePosition = {
-      left: rect.left,
-      top: rect.top,
-    };
-
     this.addEventListener("pointermove", (e) => {
       if (this._currentlyDrawing === undefined) {
         return;
@@ -92,8 +80,8 @@ export class VertonGarage extends HTMLElement {
       e.preventDefault();
       const p1 = this._currentlyDrawing.from;
       const p2 = {
-        x: e.clientX,
-        y: e.clientY,
+        x: e.pageX,
+        y: e.pageY,
       };
       Edge.moveTo(this._currentlyDrawing.edge, p1, p2);
     });
@@ -116,21 +104,21 @@ export class VertonGarage extends HTMLElement {
   startDrawingEdge(
     from: PlugId,
     centerOfPlug: Point,
-    clickedPoint: ClientPointer
+    clickedPoint: PagePointer
   ) {
     const edge = Edge.create(from, centerOfPlug, clickedPoint);
     this._currentlyDrawing = { edge, from: centerOfPlug };
     this.shadowRoot!.append(edge);
   }
 
-  finishDrawingEdge(to: JackId, p: ClientPointer) {
+  finishDrawingEdge(to: JackId, p: PagePointer) {
     if (this._currentlyDrawing === undefined) {
       return;
     }
     const p1 = this._currentlyDrawing.from;
     const p2 = {
-      x: p.clientX,
-      y: p.clientY,
+      x: p.pageX,
+      y: p.pageY,
     };
     Edge.moveTo(this._currentlyDrawing.edge, p1, p2);
     Edge.connectTo(this._currentlyDrawing.edge, to);
@@ -160,7 +148,7 @@ export namespace Edge {
   export function create(
     { vertexId, plugName }: PlugId,
     centerOfPlug: Point,
-    { clientX, clientY }: ClientPointer
+    { pageX, pageY }: PagePointer
   ): Type {
     const {
       top,
@@ -171,7 +159,7 @@ export namespace Edge {
       y1,
       x2,
       y2,
-    } = calcEdgeDef(centerOfPlug, { x: clientX, y: clientY });
+    } = calcEdgeDef(centerOfPlug, { x: pageX, y: pageY });
 
     const edge = document.createElementNS(SVG_NS, "svg");
     edge.classList.add("edge");
@@ -491,8 +479,8 @@ export class VertonVertex extends HTMLElement {
     this._dragging = true;
     this.setPointerCapture(e.pointerId);
 
-    this.x = e.clientX;
-    this.y = e.clientY;
+    this.x = e.pageX;
+    this.y = e.pageY;
   }
 
   private _onPointerMove(e: PointerEvent) {
@@ -501,8 +489,8 @@ export class VertonVertex extends HTMLElement {
       return;
     }
 
-    const newX = e.clientX;
-    const newY = e.clientY;
+    const newX = e.pageX;
+    const newY = e.pageY;
     const dx = newX - this.x;
     const dy = newY - this.y;
     this.x = newX;
@@ -770,11 +758,11 @@ namespace Jack {
 
     elem.addEventListener("pointerup", (e) => {
       e.stopPropagation();
-      garage.finishDrawingEdge(id, { clientX: e.clientX, clientY: e.clientY });
+      garage.finishDrawingEdge(id, e);
     });
     elem.addEventListener("pointerdown", (e) => {
       e.stopPropagation();
-      garage.finishDrawingEdge(id, { clientX: e.clientX, clientY: e.clientY });
+      garage.finishDrawingEdge(id, e);
     });
 
     return elem;
