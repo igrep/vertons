@@ -53,6 +53,7 @@ const componentClasses: { [elementName: string]: { new (): HTMLElement } } = {};
 
 export class VertonGarage extends HTMLElement {
   private _lastVertexId: VertexId = 0;
+  private _maxZIndex: number = 0;
   private _currentlyDrawing: CurrentlyDrawing | undefined = undefined;
 
   constructor() {
@@ -139,6 +140,15 @@ export class VertonGarage extends HTMLElement {
     const id = this._lastVertexId;
     this._lastVertexId++;
     return id;
+  }
+
+  peekNextMaxZIndex(): number {
+    return this._maxZIndex + 1;
+  }
+
+  getNextZIndex(): number {
+    this._maxZIndex++;
+    return this._maxZIndex;
   }
 }
 
@@ -472,6 +482,7 @@ export class VertonVertex extends HTMLElement {
 
   private _onPointerDown(e: PointerEvent) {
     e.preventDefault();
+    this._raiseUnlessTop();
     this._dragging = true;
     this.setPointerCapture(e.pointerId);
   }
@@ -711,6 +722,17 @@ export class VertonVertex extends HTMLElement {
         const centerOfPlug = JackOrPlug.centerOf(plug);
         Edge.moveTo(edge, centerOfJack, centerOfPlug);
       }
+    }
+  }
+
+  private _raiseUnlessTop() {
+    // NOTE: Ignore the case when the z-index gets overflowed.
+    const garage = this._garage!;
+    const zSelf = parseInt(this.style.zIndex, 10) || 0;
+    const zGarage = garage.peekNextMaxZIndex();
+    console.log({ zSelf, zGarage });
+    if (zSelf < zGarage) {
+      this.style.zIndex = garage.getNextZIndex().toString();
     }
   }
 }
