@@ -45,6 +45,8 @@ type PlugContent = LabelContent | PlugNameContent;
 
 type ConfigContent = "number" | string[];
 
+type Rect = Omit<DOMRect, "x" | "y" | "toJSON">;
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 const componentClasses: { [elementName: string]: { new (): HTMLElement } } = {};
@@ -337,15 +339,9 @@ export namespace Edge {
 export class VertonVertex extends HTMLElement {
   private _dragging = false;
   private _garage: VertonGarage | undefined = undefined;
-  x: number;
-  y: number;
 
   constructor() {
     super();
-
-    const rect = this.getBoundingClientRect();
-    this.x = rect.left;
-    this.y = rect.top;
 
     const shadow = this.attachShadow({ mode: "open" });
     const style = document.createElement("style");
@@ -478,9 +474,6 @@ export class VertonVertex extends HTMLElement {
     e.preventDefault();
     this._dragging = true;
     this.setPointerCapture(e.pointerId);
-
-    this.x = e.pageX;
-    this.y = e.pageY;
   }
 
   private _onPointerMove(e: PointerEvent) {
@@ -489,15 +482,28 @@ export class VertonVertex extends HTMLElement {
       return;
     }
 
-    const newX = e.pageX;
-    const newY = e.pageY;
-    const dx = newX - this.x;
-    const dy = newY - this.y;
-    this.x = newX;
-    this.y = newY;
+    const rect = getBoundingPageRect(this);
+    const newLeft = rect.left + e.movementX;
+    const newTop = rect.top + e.movementY;
 
-    this.style.left = `${this.offsetLeft + dx}px`;
-    this.style.top = `${this.offsetTop + dy}px`;
+    const {
+      left: garageLeft,
+      right: garageRight,
+      top: garageTop,
+      bottom: garageBottom,
+    } = getBoundingPageRect(this._garage!);
+
+    const newLeftClamped = Math.min(
+      Math.max(newLeft, garageLeft),
+      garageRight - rect.width
+    );
+    const newTopClamped = Math.min(
+      Math.max(newTop, garageTop),
+      garageBottom - rect.height
+    );
+
+    this.style.left = `${newLeftClamped}px`;
+    this.style.top = `${newTopClamped}px`;
 
     this._moveEdgesWithPlugs();
     this._moveEdgesWithJacks();
@@ -724,7 +730,7 @@ namespace JackOrPlug {
   }
 
   export function centerOf(elem: HTMLElement): Point {
-    const rect = elem.getBoundingClientRect();
+    const rect = getBoundingPageRect(elem);
     return {
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
@@ -795,4 +801,17 @@ export function activateWebComponents() {
   )) {
     customElements.define(elementName, componentClass);
   }
+}
+
+function getBoundingPageRect(elem: Element): Rect {
+  const originalRect = elem.getBoundingClientRect();
+
+  return {
+    left: originalRect.left + window.scrollX,
+    top: originalRect.top + window.scrollY,
+    right: originalRect.right + window.scrollX,
+    bottom: originalRect.bottom + window.scrollY,
+    height: originalRect.height,
+    width: originalRect.width,
+  };
 }
