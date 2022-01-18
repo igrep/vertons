@@ -466,6 +466,7 @@ export class VertonVertex extends HTMLElement {
         justify-content: center;
         width: 0.65em;
         height: 1.3em;
+        background-color: var(--color-background);
         border-radius: 0 1.3em 1.3em 0;
         border: 5px solid var(--color-window);
         border-left: 6px solid var(--color-background);
