@@ -139,6 +139,10 @@ export class VertonGarage extends HTMLElement {
     this._getVertexesContainer().appendChild(vertex);
   }
 
+  isDrawingEdge(): boolean {
+    return this._currentlyDrawing !== undefined;
+  }
+
   private _generateNewId(): VertexId {
     const id = this._lastVertexId;
     this._lastVertexId++;
@@ -756,6 +760,10 @@ namespace Plug {
     elem.dataset.plugId = id.plugName.toString();
 
     elem.addEventListener("pointerdown", (e) => {
+      if (garage.isDrawingEdge()) {
+        return;
+      }
+      e.stopPropagation();
       e.stopPropagation();
       const centerOfPlug = JackOrPlug.centerOf(elem);
       garage.startDrawingEdge(id, centerOfPlug, e);
@@ -773,14 +781,18 @@ namespace Jack {
     elem.dataset.jackId = id.jackName;
 
     elem.addEventListener("pointerup", (e) => {
+      if (!garage.isDrawingEdge()) {
+        return;
+      }
       e.stopPropagation();
-      const endPoint = JackOrPlug.centerOf(elem);
-      garage.finishDrawingEdge(id, endPoint);
+      garage.finishDrawingEdge(id, JackOrPlug.centerOf(elem));
     });
     elem.addEventListener("pointerdown", (e) => {
+      if (!garage.isDrawingEdge()) {
+        return;
+      }
       e.stopPropagation();
-      const endPoint = JackOrPlug.centerOf(elem);
-      garage.finishDrawingEdge(id, endPoint);
+      garage.finishDrawingEdge(id, JackOrPlug.centerOf(elem));
     });
 
     return elem;
