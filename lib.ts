@@ -117,15 +117,11 @@ export class VertonGarage extends HTMLElement {
     this.shadowRoot!.append(edge);
   }
 
-  finishDrawingEdge(to: JackId, p: PagePointer) {
+  finishDrawingEdge(to: JackId, p2: Point) {
     if (this._currentlyDrawing === undefined) {
       return;
     }
     const p1 = this._currentlyDrawing.from;
-    const p2 = {
-      x: p.pageX,
-      y: p.pageY,
-    };
     Edge.moveTo(this._currentlyDrawing.edge, p1, p2);
     Edge.connectTo(this._currentlyDrawing.edge, to);
     this._currentlyDrawing = undefined;
@@ -778,11 +774,13 @@ namespace Jack {
 
     elem.addEventListener("pointerup", (e) => {
       e.stopPropagation();
-      garage.finishDrawingEdge(id, e);
+      const endPoint = JackOrPlug.centerOf(elem);
+      garage.finishDrawingEdge(id, endPoint);
     });
     elem.addEventListener("pointerdown", (e) => {
       e.stopPropagation();
-      garage.finishDrawingEdge(id, e);
+      const endPoint = JackOrPlug.centerOf(elem);
+      garage.finishDrawingEdge(id, endPoint);
     });
 
     return elem;
