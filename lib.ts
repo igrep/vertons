@@ -349,8 +349,8 @@ export namespace Edge {
 }
 
 export class VertonVertex extends HTMLElement {
-  private _dragging = false;
   private _garage: VertonGarage | undefined = undefined;
+  private _movingFrom: Point | undefined = undefined;
 
   constructor() {
     super();
@@ -485,20 +485,31 @@ export class VertonVertex extends HTMLElement {
 
   private _onPointerDown(e: PointerEvent) {
     e.preventDefault();
-    this._dragging = true;
+    this._movingFrom = {
+      x: e.pageX,
+      y: e.pageY,
+    };
     this._garage!.raiseToTop(this);
     this.setPointerCapture(e.pointerId);
   }
 
   private _onPointerMove(e: PointerEvent) {
     e.preventDefault();
-    if (!this._dragging) {
+    if (!this._movingFrom) {
       return;
     }
 
+    const newX = e.pageX;
+    const newY = e.pageY;
+    const dx = newX - this._movingFrom.x;
+    const dy = newY - this._movingFrom.y;
+
+    this._movingFrom.x = newX;
+    this._movingFrom.y = newY;
+
     const rect = getBoundingPageRect(this);
-    const newLeft = rect.left + e.movementX;
-    const newTop = rect.top + e.movementY;
+    const newLeft = rect.left + dx;
+    const newTop = rect.top + dy;
 
     const {
       left: garageLeft,
@@ -524,7 +535,7 @@ export class VertonVertex extends HTMLElement {
   }
 
   private _onPointerUp(e: PointerEvent) {
-    this._dragging = false;
+    this._movingFrom = undefined;
     this.releasePointerCapture(e.pointerId);
   }
 
