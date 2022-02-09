@@ -51,6 +51,8 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 
 const componentClasses: { [elementName: string]: { new (): HTMLElement } } = {};
 
+const BACKGROUND_COLOR = "#FFDD58";
+
 export class VertonGarage extends HTMLElement {
   private _lastVertexId: VertexId = 0;
   private _currentlyDrawing: CurrentlyDrawing | undefined = undefined;
@@ -67,6 +69,7 @@ export class VertonGarage extends HTMLElement {
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: space-around;
+        background-color: ${BACKGROUND_COLOR};
       }
       .edge {
         position: absolute;
@@ -189,7 +192,11 @@ export namespace Edge {
     line.setAttribute("y1", `${y1}`);
     line.setAttribute("x2", `${x2}`);
     line.setAttribute("y2", `${y2}`);
-    line.setAttribute("stroke", "black"); // TODO: configure color
+    line.setAttribute("stroke", "#FF1BB6");
+    line.setAttribute("stroke-width", "4px");
+    line.setAttribute("stroke-linecap", "round");
+    line.setAttribute("pointer-events", "stroke");
+    line.setAttribute("fill", "none");
     edge.append(line);
 
     return edge;
@@ -379,11 +386,11 @@ export class VertonVertex extends HTMLElement {
         --width: 17em;
         --header-height: 1.6em;
 
-        --color-window: red;
-        --color-label: red;
+        --color-window: #FF0C4C;
+        --color-label: #FF0C4C;
         --color-header: white;
         --color-point: #C00;
-        --color-background: white;
+        --color-background: ${BACKGROUND_COLOR};
 
         min-height: var(--height);
         min-width: var(--width);
