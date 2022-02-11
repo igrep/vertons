@@ -75,12 +75,21 @@ export class VertonGarage extends HTMLElement {
         position: absolute;
         pointer-events: none;
       }
+      #closeButton {
+        position: absolute;
+      }
     `;
     shadow.appendChild(style);
 
     const vertexesContainer = document.createElement("div");
     vertexesContainer.id = "vertexes";
     shadow.appendChild(vertexesContainer);
+
+    const edgesContainer = document.createElement("div");
+    edgesContainer.id = "edges";
+    shadow.appendChild(edgesContainer);
+
+    shadow.appendChild(CloseButton.buildHidden("closeButton"));
 
     this.addEventListener("pointermove", (e) => {
       if (this._currentlyDrawing === undefined) {
@@ -115,9 +124,15 @@ export class VertonGarage extends HTMLElement {
     centerOfPlug: Point,
     clickedPoint: PagePointer
   ) {
-    const edge = Edge.create(from, centerOfPlug, clickedPoint);
+    const edgesContainer = this._getEdgesContainer();
+    const edge = Edge.create(
+      from,
+      centerOfPlug,
+      clickedPoint,
+      this._getCloseButtonHandle(edgesContainer)
+    );
     this._currentlyDrawing = { edge, from: centerOfPlug };
-    this.shadowRoot!.append(edge);
+    edgesContainer.append(edge);
   }
 
   finishDrawingEdge(to: JackId, p2: Point) {
@@ -134,7 +149,7 @@ export class VertonGarage extends HTMLElement {
     if (this._currentlyDrawing === undefined) {
       return;
     }
-    this.shadowRoot!.removeChild(this._currentlyDrawing.edge);
+    this._getEdgesContainer().removeChild(this._currentlyDrawing.edge);
     this._currentlyDrawing = undefined;
   }
 
@@ -155,6 +170,17 @@ export class VertonGarage extends HTMLElement {
   private _getVertexesContainer(): HTMLElement {
     return this.shadowRoot!.getElementById("vertexes")!;
   }
+
+  private _getEdgesContainer(): HTMLElement {
+    return this.shadowRoot!.getElementById("edges")!;
+  }
+
+  private _getCloseButtonHandle(parent: Element): CloseButton.Handle {
+    return CloseButton.getHandle(
+      this.shadowRoot!.getElementById("closeButton")!,
+      parent
+    );
+  }
 }
 
 componentClasses["verton-garage"] = VertonGarage;
@@ -165,7 +191,8 @@ export namespace Edge {
   export function create(
     { vertexId, plugName }: PlugId,
     centerOfPlug: Point,
-    { pageX, pageY }: PagePointer
+    { pageX, pageY }: PagePointer,
+    closeButton: CloseButton.Handle
   ): Type {
     const {
       top,
@@ -197,6 +224,15 @@ export namespace Edge {
     line.setAttribute("stroke-linecap", "round");
     line.setAttribute("pointer-events", "stroke");
     line.setAttribute("fill", "none");
+    line.addEventListener("pointerup", () => {
+      if (hasConnectedToAny(edge)) {
+        const { left, width, top, height } = getBoundingPageRect(edge);
+        closeButton.show({
+          at: { x: left + width / 2, y: top + height / 2 },
+          for: edge,
+        });
+      }
+    });
     edge.append(line);
 
     return edge;
@@ -221,6 +257,10 @@ export namespace Edge {
   export function connectTo(edge: Type, { vertexId, jackName }: JackId) {
     edge.dataset.toVertexId = vertexId.toString();
     edge.dataset.toJackId = jackName;
+  }
+
+  export function hasConnectedToAny(edge: Type): boolean {
+    return !!(edge.dataset.toVertexId && edge.dataset.toJackId);
   }
 
   // Public only for testing
@@ -817,6 +857,76 @@ namespace Jack {
   }
 }
 
+namespace CloseButton {
+  export type Type = SVGElement | HTMLElement;
+
+  const RADIUS = 20;
+
+  export function buildHidden(id: string): Type {
+    const button = document.createElementNS(SVG_NS, "svg");
+    button.id = id;
+    const padding = 3;
+    const lineWidth = 2;
+
+    const diagonalLineLengthHalf = Math.sqrt(2) * RADIUS;
+    const d1 =
+      (diagonalLineLengthHalf - RADIUS) * (RADIUS / diagonalLineLengthHalf) +
+      padding;
+
+    const diagonalLineLength = diagonalLineLengthHalf * 2;
+    const diameter = RADIUS * 2;
+    const d2 =
+      (diameter * (RADIUS + diagonalLineLengthHalf)) / diagonalLineLength -
+      padding;
+
+    button.setAttribute("width", `${RADIUS * 2}px`);
+    button.setAttribute("height", `${RADIUS * 2}px`);
+    button.innerHTML = `
+    <circle cx="${RADIUS}" cy="${RADIUS}" r="${RADIUS}" fill="#a9a9a9"></circle>
+    <line x1="${d1}" y1="${d1}" x2="${d2}" y2="${d2}" stroke-linecap="round" stroke-width="${lineWidth}" stroke="#fff"></line>
+    <line x1="${d1}" y1="${d2}" x2="${d2}" y2="${d1}" stroke-linecap="round" stroke-width="${lineWidth}" stroke="#fff"></line>
+    `;
+
+    button.style.display = "none";
+    return button;
+  }
+
+  export function hide(button: Type) {
+    button.style.display = "none";
+  }
+
+  export function getHandle(button: Type, parent: Element): Handle {
+    return {
+      show({ at: { x, y }, for: elem }) {
+        button.style.left = `${x - RADIUS}px`;
+        button.style.top = `${y - RADIUS}px`;
+        button.style.display = "block";
+        button.addEventListener(
+          "click",
+          () => {
+            parent.removeChild(elem);
+            hide(button);
+          },
+          { once: true }
+        );
+      },
+      hide() {
+        hide(button);
+      },
+    };
+  }
+
+  export type Handle = {
+    show(params: ShowParams): void;
+    hide(): void;
+  };
+
+  export type ShowParams = {
+    at: Point;
+    for: Element;
+  };
+}
+
 export class VertonStage extends HTMLElement {
   constructor() {
     super();
@@ -853,7 +963,7 @@ function getBoundingPageRect(elem: Element): Rect {
     top: originalRect.top + window.scrollY,
     right: originalRect.right + window.scrollX,
     bottom: originalRect.bottom + window.scrollY,
-    height: originalRect.height,
     width: originalRect.width,
+    height: originalRect.height,
   };
 }
