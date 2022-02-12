@@ -53,9 +53,12 @@ const componentClasses: { [elementName: string]: { new (): HTMLElement } } = {};
 
 const BACKGROUND_COLOR = "#FFDD58";
 
+const CLOSE_BUTTON_ID = "closeButton";
+
 export class VertonGarage extends HTMLElement {
   private _lastVertexId: VertexId = 0;
   private _currentlyDrawing: CurrentlyDrawing | undefined = undefined;
+  readonly closeButton: CloseButton;
 
   constructor() {
     super();
@@ -75,7 +78,7 @@ export class VertonGarage extends HTMLElement {
         position: absolute;
         pointer-events: none;
       }
-      #closeButton {
+      #${CLOSE_BUTTON_ID} {
         position: absolute;
       }
     `;
@@ -89,7 +92,8 @@ export class VertonGarage extends HTMLElement {
     edgesContainer.id = "edges";
     shadow.appendChild(edgesContainer);
 
-    shadow.appendChild(CloseButton.buildHidden("closeButton"));
+    this.closeButton = CloseButton.buildHidden(CLOSE_BUTTON_ID);
+    shadow.appendChild(this.closeButton.element);
 
     this.addEventListener("pointermove", (e) => {
       if (this._currentlyDrawing === undefined) {
@@ -105,6 +109,7 @@ export class VertonGarage extends HTMLElement {
     });
 
     this.addEventListener("pointerdown", () => {
+      this.closeButton.hide();
       this.cancelDrawingEdge();
     });
   }
@@ -129,7 +134,7 @@ export class VertonGarage extends HTMLElement {
       from,
       centerOfPlug,
       clickedPoint,
-      this._getCloseButtonHandle(edgesContainer)
+      this.closeButton
     );
     this._currentlyDrawing = { edge, from: centerOfPlug };
     edgesContainer.append(edge);
@@ -174,13 +179,6 @@ export class VertonGarage extends HTMLElement {
   private _getEdgesContainer(): HTMLElement {
     return this.shadowRoot!.getElementById("edges")!;
   }
-
-  private _getCloseButtonHandle(parent: Element): CloseButton.Handle {
-    return CloseButton.getHandle(
-      this.shadowRoot!.getElementById("closeButton")!,
-      parent
-    );
-  }
 }
 
 componentClasses["verton-garage"] = VertonGarage;
@@ -192,7 +190,7 @@ export namespace Edge {
     { vertexId, plugName }: PlugId,
     centerOfPlug: Point,
     { pageX, pageY }: PagePointer,
-    closeButton: CloseButton.Handle
+    closeButton: CloseButton
   ): Type {
     const {
       top,
@@ -224,12 +222,13 @@ export namespace Edge {
     line.setAttribute("stroke-linecap", "round");
     line.setAttribute("pointer-events", "stroke");
     line.setAttribute("fill", "none");
-    line.addEventListener("pointerup", () => {
+    line.addEventListener("pointerup", (e) => {
+      e.preventDefault();
       if (hasConnectedToAny(edge)) {
         const { left, width, top, height } = getBoundingPageRect(edge);
         closeButton.show({
           at: { x: left + width / 2, y: top + height / 2 },
-          for: edge,
+          for: () => [edge],
         });
       }
     });
@@ -532,6 +531,7 @@ export class VertonVertex extends HTMLElement {
 
   private _onPointerDown(e: PointerEvent) {
     e.preventDefault();
+    this._garage!.closeButton!.hide();
     this._movingFrom = {
       x: e.pageX,
       y: e.pageY,
@@ -582,6 +582,22 @@ export class VertonVertex extends HTMLElement {
   }
 
   private _onPointerUp(e: PointerEvent) {
+    const { right: x, top: y } = getBoundingPageRect(
+      this.shadowRoot!.getElementById("inner")!
+    );
+    this._garage!.closeButton!.show({
+      at: { x, y },
+      for: () => {
+        const toDelete: Element[] = [this];
+        this._forEdgesWithPlugs((edge) => {
+          toDelete.push(edge);
+        });
+        this._forEdgesWithJacks((edge) => {
+          toDelete.push(edge);
+        });
+        return toDelete;
+      },
+    });
     this._movingFrom = undefined;
     this.releasePointerCapture(e.pointerId);
   }
@@ -739,49 +755,60 @@ export class VertonVertex extends HTMLElement {
 
   private _moveEdgesWithPlugs() {
     const garageRoot = this._garage!.shadowRoot!;
+    this._forEdgesWithPlugs((edge, plug) => {
+      const centerOfPlug = JackOrPlug.centerOf(plug);
+      const jack = Edge.findJackWith(garageRoot, edge);
+      if (!jack) {
+        console.error(
+          `Could not find a jack with ${edge.dataset.toVertexId} ${edge.dataset.toJackId}`
+        );
+        return;
+      }
+      const centerOfJack = JackOrPlug.centerOf(jack);
+      Edge.moveTo(edge, centerOfPlug, centerOfJack);
+    });
+  }
+
+  private _moveEdgesWithJacks() {
+    const garageRoot = this._garage!.shadowRoot!;
+    this._forEdgesWithJacks((edge, jack) => {
+      const centerOfJack = JackOrPlug.centerOf(jack);
+      const plug = Edge.findPlugWith(garageRoot, edge);
+      if (!plug) {
+        console.error(
+          `Could not find a plug with ${edge.dataset.toVertexId} ${edge.dataset.toPlugId}`
+        );
+        return;
+      }
+      const centerOfPlug = JackOrPlug.centerOf(plug as Plug.Type);
+      Edge.moveTo(edge, centerOfJack, centerOfPlug);
+    });
+  }
+
+  private _forEdgesWithPlugs(body: (edge: Edge.Type, plug: Plug.Type) => void) {
+    const garageRoot = this._garage!.shadowRoot!;
     const plugs = Array.from(
       this.shadowRoot!.getElementById("plugs")!.children
     );
     for (const plug_ of plugs) {
       const plug = plug_ as Plug.Type;
-      const centerOfPlug = JackOrPlug.centerOf(plug);
       const selector = `[data-from-vertex-id="${this.dataset.vertexId}"][data-from-plug-id="${plug.dataset.plugId}"]`;
       for (const edge_ of Array.from(garageRoot.querySelectorAll(selector))) {
-        const edge = edge_ as Edge.Type;
-        const jack = Edge.findJackWith(garageRoot, edge);
-        if (!jack) {
-          console.error(
-            `Could not find a jack with ${edge.dataset.toVertexId} ${edge.dataset.toJackId}`
-          );
-          continue;
-        }
-        const centerOfJack = JackOrPlug.centerOf(jack);
-        Edge.moveTo(edge, centerOfPlug, centerOfJack);
+        body(edge_ as Edge.Type, plug);
       }
     }
   }
 
-  // TODO: Refactor?
-  private _moveEdgesWithJacks() {
+  private _forEdgesWithJacks(body: (edge: Edge.Type, jack: Jack.Type) => void) {
     const garageRoot = this._garage!.shadowRoot!;
     const jacks = Array.from(
       this.shadowRoot!.getElementById("jacks")!.children
     );
     for (const jack_ of jacks) {
       const jack = jack_ as Jack.Type;
-      const centerOfJack = JackOrPlug.centerOf(jack);
       const selector = `[data-to-vertex-id="${this.dataset.vertexId}"][data-to-jack-id="${jack.dataset.jackId}"]`;
       for (const edge_ of Array.from(garageRoot.querySelectorAll(selector))) {
-        const edge = edge_ as Edge.Type;
-        const plug = Edge.findPlugWith(garageRoot, edge);
-        if (!plug) {
-          console.error(
-            `Could not find a plug with ${edge.dataset.toVertexId} ${edge.dataset.toPlugId}`
-          );
-          continue;
-        }
-        const centerOfPlug = JackOrPlug.centerOf(plug);
-        Edge.moveTo(edge, centerOfJack, centerOfPlug);
+        body(edge_ as Edge.Type, jack);
       }
     }
   }
@@ -856,75 +883,82 @@ namespace Jack {
   }
 }
 
-namespace CloseButton {
-  export type Type = SVGElement | HTMLElement;
+const CLOSE_BUTTON_RADIUS = 20;
 
-  const RADIUS = 20;
+class CloseButton {
+  readonly element: SVGElement;
+  private _collectTargets: (() => Element[]) | undefined = undefined;
 
-  export function buildHidden(id: string): Type {
-    const button = document.createElementNS(SVG_NS, "svg");
-    button.id = id;
+  constructor(id: string) {
+    this.element = document.createElementNS(SVG_NS, "svg");
+    this.element.id = id;
     const padding = 3;
     const lineWidth = 2;
+    const radius = CLOSE_BUTTON_RADIUS;
 
-    const diagonalLineLengthHalf = Math.sqrt(2) * RADIUS;
+    const diagonalLineLengthHalf = Math.sqrt(2) * radius;
     const d1 =
-      (diagonalLineLengthHalf - RADIUS) * (RADIUS / diagonalLineLengthHalf) +
+      (diagonalLineLengthHalf - radius) * (radius / diagonalLineLengthHalf) +
       padding;
 
     const diagonalLineLength = diagonalLineLengthHalf * 2;
-    const diameter = RADIUS * 2;
+    const diameter = radius * 2;
     const d2 =
-      (diameter * (RADIUS + diagonalLineLengthHalf)) / diagonalLineLength -
+      (diameter * (radius + diagonalLineLengthHalf)) / diagonalLineLength -
       padding;
 
-    button.setAttribute("width", `${RADIUS * 2}px`);
-    button.setAttribute("height", `${RADIUS * 2}px`);
-    button.innerHTML = `
-    <circle cx="${RADIUS}" cy="${RADIUS}" r="${RADIUS}" fill="#a9a9a9"></circle>
+    this.element.setAttribute("width", `${radius * 2}px`);
+    this.element.setAttribute("height", `${radius * 2}px`);
+    this.element.innerHTML = `
+    <circle cx="${radius}" cy="${radius}" r="${radius}" fill="#a9a9a9"></circle>
     <line x1="${d1}" y1="${d1}" x2="${d2}" y2="${d2}" stroke-linecap="round" stroke-width="${lineWidth}" stroke="#fff"></line>
     <line x1="${d1}" y1="${d2}" x2="${d2}" y2="${d1}" stroke-linecap="round" stroke-width="${lineWidth}" stroke="#fff"></line>
     `;
 
-    button.style.display = "none";
-    return button;
+    this.element.style.display = "none";
+
+    this.element.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+    });
+    this.element.addEventListener("pointerup", (e) => {
+      e.stopPropagation();
+    });
+    this.element.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (this._collectTargets === undefined) {
+        console.warn("CloseButton: target not set");
+        return;
+      }
+      for (const target of this._collectTargets()) {
+        target.parentNode!.removeChild(target);
+      }
+      this.hide();
+    });
   }
 
-  export function hide(button: Type) {
-    button.style.display = "none";
+  static buildHidden(id: string): CloseButton {
+    const closeButton = new this(id);
+    closeButton.hide();
+    return closeButton;
   }
 
-  export function getHandle(button: Type, parent: Element): Handle {
-    return {
-      show({ at: { x, y }, for: elem }) {
-        button.style.left = `${x - RADIUS}px`;
-        button.style.top = `${y - RADIUS}px`;
-        button.style.display = "block";
-        button.addEventListener(
-          "click",
-          () => {
-            parent.removeChild(elem);
-            hide(button);
-          },
-          { once: true }
-        );
-      },
-      hide() {
-        hide(button);
-      },
-    };
+  show({ at: { x, y }, for: elem }: ShowParams) {
+    const radius = CLOSE_BUTTON_RADIUS;
+    this.element.style.left = `${x - radius}px`;
+    this.element.style.top = `${y - radius}px`;
+    this.element.style.display = "block";
+    this._collectTargets = elem;
   }
 
-  export type Handle = {
-    show(params: ShowParams): void;
-    hide(): void;
-  };
-
-  export type ShowParams = {
-    at: Point;
-    for: Element;
-  };
+  hide() {
+    this.element.style.display = "none";
+  }
 }
+
+type ShowParams = {
+  at: Point;
+  for: () => Element[];
+};
 
 export class VertonStage extends HTMLElement {
   constructor() {
