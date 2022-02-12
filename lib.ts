@@ -930,7 +930,7 @@ class CloseButton {
         return;
       }
       for (const target of this._collectTargets()) {
-        target.parentNode!.removeChild(target);
+        target.parentNode?.removeChild(target);
       }
       this.hide();
     });
