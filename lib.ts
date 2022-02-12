@@ -822,7 +822,6 @@ namespace Plug {
         return;
       }
       e.stopPropagation();
-      e.stopPropagation();
       const centerOfPlug = JackOrPlug.centerOf(elem);
       garage.startDrawingEdge(id, centerOfPlug, e);
     });
