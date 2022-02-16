@@ -1,7 +1,7 @@
 type VertexView = {
   header: string;
   plugContents?: PlugContent[];
-  configContents?: { [key: string]: ConfigContent };
+  configContents?: [key: string];
   jackContents?: JackContent[];
   colors?: Partial<Colors>;
 };
@@ -42,8 +42,6 @@ type JackNameContent = { jackName: JackName; label?: string };
 type PlugNameContent = { plugName: PlugName; label?: string };
 type JackContent = LabelContent | JackNameContent;
 type PlugContent = LabelContent | PlugNameContent;
-
-type ConfigContent = "number" | string[];
 
 type Rect = Omit<DOMRect, "x" | "y" | "toJSON">;
 
@@ -116,7 +114,7 @@ export class VertonGarage extends HTMLElement {
 
   addVertex(spec: VertexView): void {
     const specFilled = Object.assign(
-      { plugContents: [], configContents: {}, jackContents: [], colors: {} },
+      { plugContents: [], configContents: [], jackContents: [], colors: {} },
       spec
     );
     this._getVertexesContainer().append(
@@ -525,6 +523,17 @@ export class VertonVertex extends HTMLElement {
         border-radius: 0.5em;
         background-color: var(--color-point);
       }
+
+      #Config-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+      }
+      .config {
+        display: block;
+        font-size: 1.4em;
+        width: calc(var(--width) * 0.4);
+      }
     `;
     shadow.appendChild(style);
   }
@@ -604,7 +613,13 @@ export class VertonVertex extends HTMLElement {
 
   static build(
     vertexId: VertexId,
-    { header, plugContents, jackContents, colors }: Required<VertexView>,
+    {
+      header,
+      plugContents,
+      jackContents,
+      configContents,
+      colors,
+    }: Required<VertexView>,
     garage: VertonGarage
   ): VertonVertex {
     const obj = new this();
@@ -628,6 +643,8 @@ export class VertonVertex extends HTMLElement {
     obj.dataset.vertexId = vertexId.toString();
 
     obj._appendJacks(vertexId, jackContents, jacksJackLabelsPlugLabels, garage);
+
+    VertonVertex._appendConfigInputs(configContents, jacksJackLabelsPlugLabels);
 
     r.append(inner);
 
@@ -664,10 +681,23 @@ export class VertonVertex extends HTMLElement {
     return result as Jack.Type | undefined;
   }
 
+  getConfiguredValue(key: string): number | undefined {
+    const v = this.shadowRoot!.getElementById(`config-${key}`);
+    if (!v) {
+      throw new Error(`No config found for ${JSON.stringify(key)}`);
+    }
+    const n = Number((v as HTMLInputElement).value);
+    if (isNaN(n)) {
+      console.warn(`Invalid config value ${JSON.stringify(n)}`);
+      return undefined;
+    }
+    return n;
+  }
+
   private _appendJacks(
     vertexId: VertexId,
     jackContents: JackContent[],
-    inner: HTMLDivElement,
+    container: HTMLDivElement,
     garage: VertonGarage
   ) {
     const jacksElem = document.createElement("div");
@@ -702,13 +732,13 @@ export class VertonVertex extends HTMLElement {
 
     jacksJackLabels.append(jacksElem);
     jacksJackLabels.append(labels);
-    inner.append(jacksJackLabels);
+    container.append(jacksJackLabels);
   }
 
   private _appendPlugs(
     vertexId: VertexId,
     plugContents: PlugContent[],
-    inner: HTMLElement,
+    container: HTMLElement,
     garage: VertonGarage
   ) {
     const r = this.shadowRoot!;
@@ -748,7 +778,7 @@ export class VertonVertex extends HTMLElement {
       }
     }
 
-    inner.append(labels);
+    container.append(labels);
 
     r.append(plugsOuter);
   }
@@ -811,6 +841,29 @@ export class VertonVertex extends HTMLElement {
         body(edge_ as Edge.Type, jack);
       }
     }
+  }
+
+  private static _appendConfigInputs(
+    configContents: string[],
+    container: HTMLElement
+  ) {
+    const div = document.createElement("div");
+    div.id = "Config-container"; // Capitalize the id to avoid name conflicts.
+    for (const key of configContents) {
+      const input = document.createElement("input");
+      input.setAttribute("type", "number");
+      input.setAttribute("value", "0");
+      input.id = `config-${key}`;
+      input.classList.add("config");
+
+      // Prevent the parent vertex from taking focus by setPointerCapture
+      input.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+      });
+
+      div.appendChild(input);
+    }
+    container.appendChild(div);
   }
 }
 

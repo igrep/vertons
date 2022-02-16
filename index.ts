@@ -31,3 +31,9 @@ garage.addVertex({
   ],
   colors: { window: "#FF7A26" },
 });
+
+garage.addVertex({
+  header: "定数",
+  plugContents: [{ label: "値", plugName: "value" }],
+  configContents: ["value"],
+});
