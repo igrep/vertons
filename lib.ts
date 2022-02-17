@@ -1013,26 +1013,6 @@ type ShowParams = {
   for: () => Element[];
 };
 
-export class VertonStage extends HTMLElement {
-  constructor() {
-    super();
-
-    // const shadow = this.attachShadow({ mode: "open" });
-  }
-}
-
-customElements.define("verton-stage", VertonStage);
-
-export class VertonObject extends HTMLElement {
-  constructor() {
-    super();
-
-    // const shadow = this.attachShadow({ mode: "open" });
-  }
-}
-
-componentClasses["verton-object"] = VertonObject;
-
 export function activateWebComponents() {
   for (const [elementName, componentClass] of Object.entries(
     componentClasses
