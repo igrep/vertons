@@ -4,6 +4,7 @@ type VertexView = {
   configContents?: [key: string];
   jackContents?: JackContent[];
   colors?: Partial<Colors>;
+  position: Point;
 };
 
 type Colors = {
@@ -583,8 +584,8 @@ export class VertonVertex extends HTMLElement {
       garageBottom - rect.height
     );
 
-    this.style.left = `${newLeftClamped}px`;
-    this.style.top = `${newTopClamped}px`;
+    this._setX(newLeftClamped);
+    this._setY(newTopClamped);
 
     this._moveEdgesWithPlugs();
     this._moveEdgesWithJacks();
@@ -619,10 +620,14 @@ export class VertonVertex extends HTMLElement {
       jackContents,
       configContents,
       colors,
+      position,
     }: Required<VertexView>,
     garage: VertonGarage
   ): VertonVertex {
     const obj = new this();
+    obj._setX(position.x);
+    obj._setY(position.y);
+
     const r = obj.shadowRoot!;
     obj._garage = garage;
 
@@ -669,6 +674,14 @@ export class VertonVertex extends HTMLElement {
     if (colors.background) {
       this.style.setProperty("--color-background", colors.background);
     }
+  }
+
+  private _setX(x: number) {
+    this.style.left = `${x}px`;
+  }
+
+  private _setY(y: number) {
+    this.style.top = `${y}px`;
   }
 
   findPlugOf(plugId: string): Plug.Type | undefined {
