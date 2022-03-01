@@ -821,7 +821,7 @@ export class VertonVertex extends HTMLElement {
       const jack = jacks[i];
       const hasJackId = "jackId" in jack;
       if (hasJackId) {
-        const jackId = (jack as JackIdContent).jackId;
+        const jackId = VertonVertex.validateId((jack as JackIdContent).jackId);
         jacksElem.append(Jack.build({ vertexId, jackId }, garage));
       }
 
@@ -872,7 +872,7 @@ export class VertonVertex extends HTMLElement {
       const plug = plugs[i];
       const hasPlugId = "plugId" in plug;
       if (hasPlugId) {
-        const plugId = (plug as PlugIdContent).plugId;
+        const plugId = VertonVertex.validateId((plug as PlugIdContent).plugId);
         plugsElem.append(Plug.build({ vertexId, plugId }, garage));
       }
 
@@ -962,7 +962,7 @@ export class VertonVertex extends HTMLElement {
       const input = document.createElement("input");
       input.setAttribute("type", "number");
       input.setAttribute("value", value.toString());
-      input.id = `config-${key}`;
+      input.id = `config-${VertonVertex.validateId(key)}`;
       input.classList.add("config");
 
       // Prevent the parent vertex from taking focus by setPointerCapture
@@ -973,6 +973,13 @@ export class VertonVertex extends HTMLElement {
       div.appendChild(input);
     }
     container.appendChild(div);
+  }
+
+  static validateId(s: string): string {
+    if (/^[-\w]+$/.test(s)) {
+      return s;
+    }
+    throw new Error(`Invalid identifier: ${JSON.stringify(s)}`);
   }
 
   toJsObject(): Required<VertonVertexJsObject> {
