@@ -1,6 +1,18 @@
 import * as fc from "fast-check";
+import { array, record } from "fast-check";
 
-import { Edge } from "./lib";
+import {
+  Edge,
+  VertonGarage,
+  PlugJsObject,
+  JackJsObject,
+  VertonVertexJsObject,
+  VertonGarageJsObject,
+  VertexId,
+  GwPlugId,
+  GwJackId,
+  activateWebComponents,
+} from "./lib";
 
 describe("Edge.calcEdgeDef", () => {
   test("The returned value should always be positive", () => {
@@ -118,5 +130,125 @@ describe("Edge.calcEdgeDef", () => {
         )
       );
     });
+  });
+});
+
+activateWebComponents();
+
+describe("VertonGarage#toJsObject/#loadJsObject", () => {
+  it("can load any VertonGarageJsObject and serialize it back", () => {
+    const identifier: () => fc.Arbitrary<string> = () =>
+      fc.mixedCase(
+        fc.stringOf(
+          fc.constantFrom(
+            ..."1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ-_".split("")
+          ),
+          { minLength: 1 }
+        )
+      );
+    const colorCode: () => fc.Arbitrary<string> = () =>
+      fc.hexaString({ minLength: 6, maxLength: 6 }).map((hex) => `#${hex}`);
+    const anyJsObject: () => fc.Arbitrary<VertonGarageJsObject> = () =>
+      fc.set(fc.nat()).chain((ids: VertexId[]) => {
+        let gVertexes: fc.Arbitrary<
+          Required<VertonVertexJsObject>[]
+        > = fc.constant([]);
+        for (const id of ids) {
+          gVertexes = gVertexes.chain((vertexes) =>
+            record({
+              _id: fc.constant(id),
+              header: fc.constant(`<Vertex#${id}>`),
+              plugs: array(
+                fc.oneof(
+                  fc.record({ label: fc.constant('<plug label"') }),
+                  fc.record(
+                    {
+                      plugId: identifier(),
+                      label: fc.constant('<plug& " label'),
+                    },
+                    {
+                      requiredKeys: ["plugId"],
+                    }
+                  )
+                )
+              ),
+              config: fc.dictionary(identifier(), fc.double()),
+              jacks: array(
+                fc.oneof(
+                  record({ label: fc.constant('>jack label"') }),
+                  record(
+                    {
+                      jackId: identifier(),
+                      label: fc.constant('>jack& " label'),
+                    },
+                    {
+                      requiredKeys: ["jackId"],
+                    }
+                  )
+                )
+              ),
+              colors: record(
+                {
+                  window: colorCode(),
+                  label: colorCode(),
+                  header: colorCode(),
+                  point: colorCode(),
+                  background: colorCode(),
+                },
+                {
+                  withDeletedKeys: true,
+                }
+              ),
+              position: record({
+                x: fc.integer(),
+                y: fc.integer(),
+              }),
+            }).map((vertex) => [...vertexes, vertex])
+          );
+        }
+        return gVertexes.chain((vertexes) => {
+          const plugIds: GwPlugId[] = vertexes.flatMap(
+            (vertex: Required<VertonVertexJsObject>) =>
+              (vertex.plugs || []).flatMap((plug: PlugJsObject) => {
+                if ("plugId" in plug) {
+                  return { vertexId: vertex._id, plugId: plug.plugId };
+                } else {
+                  return [];
+                }
+              })
+          );
+          const jackIds: GwJackId[] = vertexes.flatMap(
+            (vertex: Required<VertonVertexJsObject>) =>
+              (vertex.jacks || []).flatMap((jack: JackJsObject) => {
+                if ("jackId" in jack) {
+                  return { vertexId: vertex._id, jackId: jack.jackId };
+                } else {
+                  return [];
+                }
+              })
+          );
+          if (plugIds.length <= 0 || jackIds.length <= 0) {
+            return fc.constant({ vertexes, edges: [] });
+          }
+          return array(
+            record({
+              from: fc.constantFrom(...plugIds),
+              to: fc.constantFrom(...jackIds),
+            })
+          ).map((edges) => {
+            return {
+              vertexes,
+              edges,
+            };
+          });
+        });
+      });
+    fc.assert(
+      fc.property(anyJsObject(), (jso) => {
+        const garage = new VertonGarage();
+        garage.loadJsObject(jso);
+        expect(garage.toJsObject()).toEqual(jso);
+      })
+    );
   });
 });

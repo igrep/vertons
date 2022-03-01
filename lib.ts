@@ -1,11 +1,19 @@
-type VertexView = {
+export type VertonGarageJsObject = {
+  vertexes: Required<VertonVertexJsObject>[];
+  edges: Edge.JsObject[];
+};
+
+export type VertonVertexJsObject = {
+  _id: VertexId;
   header: string;
-  plugContents?: PlugContent[];
-  configContents?: [key: string];
-  jackContents?: JackContent[];
+  plugs?: PlugJsObject[];
+  config?: Config;
+  jacks?: JackJsObject[];
   colors?: Partial<Colors>;
   position: Point;
 };
+
+type Config = { [key: string]: number };
 
 type Colors = {
   window: string;
@@ -20,13 +28,14 @@ type CurrentlyDrawing = {
   from: Point;
 };
 
-type VertexId = number;
+export type VertexId = number;
 
-type JackName = string;
-type PlugName = string;
+export type JackId = string;
+export type PlugId = string;
 
-type JackId = { vertexId: VertexId; jackName: JackName };
-type PlugId = { vertexId: VertexId; plugName: PlugName };
+// GW: Garage-Wide
+export type GwPlugId = { vertexId: VertexId; plugId: PlugId };
+export type GwJackId = { vertexId: VertexId; jackId: JackId };
 
 type PagePointer = {
   pageX: number;
@@ -38,11 +47,11 @@ type Point = {
   y: number;
 };
 
-type LabelContent = { label: string };
-type JackNameContent = { jackName: JackName; label?: string };
-type PlugNameContent = { plugName: PlugName; label?: string };
-type JackContent = LabelContent | JackNameContent;
-type PlugContent = LabelContent | PlugNameContent;
+export type LabelContent = { label: string };
+export type JackIdContent = { jackId: JackId; label?: string };
+export type PlugIdContent = { plugId: PlugId; label?: string };
+export type JackJsObject = LabelContent | JackIdContent;
+export type PlugJsObject = LabelContent | PlugIdContent;
 
 type Rect = Omit<DOMRect, "x" | "y" | "toJSON">;
 
@@ -113,22 +122,25 @@ export class VertonGarage extends HTMLElement {
     });
   }
 
-  addVertex(spec: VertexView): void {
+  addVertex(spec: Omit<VertonVertexJsObject, "_id">): void {
     const specFilled = Object.assign(
-      { plugContents: [], configContents: [], jackContents: [], colors: {} },
+      {
+        plugs: [],
+        config: [],
+        jacks: [],
+        colors: {},
+        _id: this._generateNewId(),
+      },
       spec
     );
-    this._getVertexesContainer().append(
-      VertonVertex.build(this._generateNewId(), specFilled, this)
-    );
+    this._getVertexesContainer().append(VertonVertex.build(specFilled, this));
   }
 
   startDrawingEdge(
-    from: PlugId,
+    from: GwPlugId,
     centerOfPlug: Point,
     clickedPoint: PagePointer
   ) {
-    const edgesContainer = this._getEdgesContainer();
     const edge = Edge.create(
       from,
       centerOfPlug,
@@ -136,10 +148,10 @@ export class VertonGarage extends HTMLElement {
       this.closeButton
     );
     this._currentlyDrawing = { edge, from: centerOfPlug };
-    edgesContainer.append(edge);
+    this._getEdgesContainer().append(edge);
   }
 
-  finishDrawingEdge(to: JackId, p2: Point) {
+  finishDrawingEdge(to: GwJackId, p2: Point) {
     if (this._currentlyDrawing === undefined) {
       return;
     }
@@ -165,6 +177,63 @@ export class VertonGarage extends HTMLElement {
     return this._currentlyDrawing !== undefined;
   }
 
+  findPlugWith({ vertexId, plugId }: GwPlugId): Plug.Type | undefined {
+    const vertex = this._getVertexesContainer().querySelector(
+      `[data-vertex-id="${vertexId}"]`
+    ) as VertonVertex | null;
+    return vertex?.findPlugOf(plugId!);
+  }
+
+  findJackWith({ vertexId, jackId }: GwJackId): Jack.Type | undefined {
+    const vertex = this._getVertexesContainer().querySelector(
+      `[data-vertex-id="${vertexId}"]`
+    ) as VertonVertex | null;
+    return vertex?.findJackOf(jackId!);
+  }
+
+  toJsObject(): VertonGarageJsObject {
+    const vertexes: Required<VertonVertexJsObject>[] = [];
+    const vertexElems = this._getVertexesContainer().getElementsByTagName(
+      "verton-vertex"
+    ) as HTMLCollectionOf<VertonVertex>;
+    for (let i = 0; i < vertexElems.length; ++i) {
+      vertexes.push(vertexElems[i].toJsObject());
+    }
+
+    const edges: Edge.JsObject[] = [];
+    const edgeElems = this._getEdgesContainer().children;
+    for (let i = 0; i < edgeElems.length; ++i) {
+      edges.push(Edge.toJsObject(edgeElems[i] as Edge.Type));
+    }
+    return { vertexes, edges };
+  }
+
+  loadJsObject({ vertexes, edges }: VertonGarageJsObject) {
+    let maxVertexId = this._lastVertexId;
+    for (const vertex of vertexes) {
+      this._getVertexesContainer().append(VertonVertex.build(vertex, this));
+      if (vertex._id > maxVertexId) {
+        maxVertexId = vertex._id;
+      }
+    }
+    this._lastVertexId = maxVertexId;
+    for (const { from, to } of edges) {
+      const plug = this.findPlugWith(from)!;
+      const centerOfPlug = JackOrPlug.centerOf(plug);
+      const edgeElem = Edge.create(
+        from,
+        centerOfPlug,
+        { pageX: centerOfPlug.x, pageY: centerOfPlug.y },
+        this.closeButton
+      );
+      const jack = this.findJackWith(to)!;
+      const centerOfJack = JackOrPlug.centerOf(jack);
+      Edge.moveTo(edgeElem, centerOfPlug, centerOfJack);
+      Edge.connectTo(edgeElem, to);
+      this._getEdgesContainer().append(edgeElem);
+    }
+  }
+
   private _generateNewId(): VertexId {
     const id = this._lastVertexId;
     this._lastVertexId++;
@@ -184,9 +253,13 @@ componentClasses["verton-garage"] = VertonGarage;
 
 export namespace Edge {
   export type Type = SVGElement;
+  export type JsObject = {
+    from: GwPlugId;
+    to: GwJackId;
+  };
 
   export function create(
-    { vertexId, plugName }: PlugId,
+    { vertexId, plugId }: GwPlugId,
     centerOfPlug: Point,
     { pageX, pageY }: PagePointer,
     closeButton: CloseButton
@@ -209,7 +282,7 @@ export namespace Edge {
     edge.setAttribute("width", `${width}px`);
     edge.setAttribute("height", `${height}px`);
     edge.dataset.fromVertexId = vertexId.toString();
-    edge.dataset.fromPlugId = plugName.toString();
+    edge.dataset.fromPlugId = plugId.toString();
 
     const line = document.createElementNS(SVG_NS, "line");
     line.setAttribute("x1", `${x1}`);
@@ -252,9 +325,9 @@ export namespace Edge {
     line.setAttribute("y2", `${y2}`);
   }
 
-  export function connectTo(edge: Type, { vertexId, jackName }: JackId) {
+  export function connectTo(edge: Type, { vertexId, jackId }: GwJackId) {
     edge.dataset.toVertexId = vertexId.toString();
-    edge.dataset.toJackId = jackName;
+    edge.dataset.toJackId = jackId;
   }
 
   export function hasConnectedToAny(edge: Type): boolean {
@@ -372,26 +445,47 @@ export namespace Edge {
     }
   }
 
-  export function findPlugWith(
-    garageRoot: ShadowRoot,
-    edge: Type
-  ): Plug.Type | undefined {
-    const vertex = garageRoot.querySelector(
-      `[data-vertex-id="${edge.dataset.fromVertexId}"]`
-    ) as VertonVertex | null;
-    return vertex?.findPlugOf(edge.dataset.fromPlugId!);
+  export function getGwPlugId(edge: Type): GwPlugId {
+    return {
+      vertexId: Number(edge.dataset.fromVertexId)!,
+      plugId: edge.dataset.fromPlugId!,
+    };
   }
 
-  export function findJackWith(
-    garageRoot: ShadowRoot,
-    edge: Type
-  ): Jack.Type | undefined {
-    const vertex = garageRoot.querySelector(
-      `[data-vertex-id="${edge.dataset.toVertexId}"]`
-    ) as VertonVertex | null;
-    return vertex?.findJackOf(edge.dataset.toJackId!);
+  export function getGwJackId(edge: Type): GwJackId {
+    return {
+      vertexId: Number(edge.dataset.toVertexId)!,
+      jackId: edge.dataset.toJackId!,
+    };
+  }
+
+  export function toJsObject(edge: Type): JsObject {
+    const fromVertexId = Number(edge.dataset.fromVertexId);
+    if (isNaN(fromVertexId)) {
+      throw new Error(`Invalid fromVertexId: ${edge.dataset.fromVertexId}`);
+    }
+    const fromPlugId = edge.dataset.fromPlugId;
+    if (!fromPlugId) {
+      throw new Error(`Invalid fromPlugId: ${edge.dataset.fromPlugId}`);
+    }
+
+    const toVertexId = Number(edge.dataset.toVertexId);
+    if (isNaN(toVertexId)) {
+      throw new Error(`Invalid toVertexId: ${edge.dataset.toVertexId}`);
+    }
+
+    const toJackId = edge.dataset.toJackId;
+    if (!toJackId) {
+      throw new Error(`Invalid toJackId: ${edge.dataset.toJackId}`);
+    }
+    return {
+      from: { vertexId: fromVertexId, plugId: fromPlugId },
+      to: { vertexId: toVertexId, jackId: toJackId },
+    };
   }
 }
+
+const CONFIG_ID_PREFIX = "config-";
 
 export class VertonVertex extends HTMLElement {
   private _garage: VertonGarage | undefined = undefined;
@@ -613,17 +707,19 @@ export class VertonVertex extends HTMLElement {
   }
 
   static build(
-    vertexId: VertexId,
-    {
-      header,
-      plugContents,
-      jackContents,
-      configContents,
-      colors,
-      position,
-    }: Required<VertexView>,
+    jso: Required<VertonVertexJsObject>,
     garage: VertonGarage
   ): VertonVertex {
+    const {
+      header,
+      plugs,
+      jacks,
+      config,
+      colors,
+      position,
+      _id: vertexId,
+    } = jso;
+
     const obj = new this();
     obj._setX(position.x);
     obj._setY(position.y);
@@ -647,13 +743,15 @@ export class VertonVertex extends HTMLElement {
 
     obj.dataset.vertexId = vertexId.toString();
 
-    obj._appendJacks(vertexId, jackContents, jacksJackLabelsPlugLabels, garage);
+    obj._appendJacks(vertexId, jacks, jacksJackLabelsPlugLabels, garage);
 
-    VertonVertex._appendConfigInputs(configContents, jacksJackLabelsPlugLabels);
+    VertonVertex._appendConfigInputs(config, jacksJackLabelsPlugLabels);
 
     r.append(inner);
 
-    obj._appendPlugs(vertexId, plugContents, jacksJackLabelsPlugLabels, garage);
+    obj._appendPlugs(vertexId, plugs, jacksJackLabelsPlugLabels, garage);
+
+    obj.dataset.initialValues = JSON.stringify(jso);
 
     return obj;
   }
@@ -695,7 +793,7 @@ export class VertonVertex extends HTMLElement {
   }
 
   getConfiguredValue(key: string): number | undefined {
-    const v = this.shadowRoot!.getElementById(`config-${key}`);
+    const v = this.shadowRoot!.getElementById(CONFIG_ID_PREFIX + key);
     if (!v) {
       throw new Error(`No config found for ${JSON.stringify(key)}`);
     }
@@ -709,7 +807,7 @@ export class VertonVertex extends HTMLElement {
 
   private _appendJacks(
     vertexId: VertexId,
-    jackContents: JackContent[],
+    jacks: JackJsObject[],
     container: HTMLDivElement,
     garage: VertonGarage
   ) {
@@ -719,12 +817,12 @@ export class VertonVertex extends HTMLElement {
     const labels = document.createElement("div");
     labels.id = "jack-labels";
 
-    for (let jackId = 0; jackId < jackContents.length; ++jackId) {
-      const jack = jackContents[jackId];
-      const hasJackName = "jackName" in jack;
-      if (hasJackName) {
-        const jackName = (jack as JackNameContent).jackName;
-        jacksElem.append(Jack.build({ vertexId, jackName }, garage));
+    for (let i = 0; i < jacks.length; ++i) {
+      const jack = jacks[i];
+      const hasJackId = "jackId" in jack;
+      if (hasJackId) {
+        const jackId = (jack as JackIdContent).jackId;
+        jacksElem.append(Jack.build({ vertexId, jackId }, garage));
       }
 
       const hasLabel = "label" in jack;
@@ -735,8 +833,8 @@ export class VertonVertex extends HTMLElement {
         labels.append(labelElem);
       }
 
-      if (!hasJackName && !hasLabel) {
-        console.error(`Unkown object in jackContents:`, jack);
+      if (!hasJackId && !hasLabel) {
+        console.error(`Unkown object in jacks:`, jack);
       }
     }
 
@@ -750,7 +848,7 @@ export class VertonVertex extends HTMLElement {
 
   private _appendPlugs(
     vertexId: VertexId,
-    plugContents: PlugContent[],
+    plugs: PlugJsObject[],
     container: HTMLElement,
     garage: VertonGarage
   ) {
@@ -770,12 +868,12 @@ export class VertonVertex extends HTMLElement {
     const labels = document.createElement("div");
     labels.id = "plug-labels";
 
-    for (let plugId = 0; plugId < plugContents.length; ++plugId) {
-      const plug = plugContents[plugId];
-      const hasPlugName = "plugName" in plug;
-      if (hasPlugName) {
-        const plugName = (plug as PlugNameContent).plugName;
-        plugsElem.append(Plug.build({ vertexId, plugName }, garage));
+    for (let i = 0; i < plugs.length; ++i) {
+      const plug = plugs[i];
+      const hasPlugId = "plugId" in plug;
+      if (hasPlugId) {
+        const plugId = (plug as PlugIdContent).plugId;
+        plugsElem.append(Plug.build({ vertexId, plugId }, garage));
       }
 
       const hasLabel = "label" in plug;
@@ -786,8 +884,8 @@ export class VertonVertex extends HTMLElement {
         labels.append(labelElem);
       }
 
-      if (!hasPlugName && !hasLabel) {
-        console.error(`Unkown object in plugContents:`, plug);
+      if (!hasPlugId && !hasLabel) {
+        console.error(`Unkown object in plugs:`, plug);
       }
     }
 
@@ -797,10 +895,9 @@ export class VertonVertex extends HTMLElement {
   }
 
   private _moveEdgesWithPlugs() {
-    const garageRoot = this._garage!.shadowRoot!;
     this._forEdgesWithPlugs((edge, plug) => {
       const centerOfPlug = JackOrPlug.centerOf(plug);
-      const jack = Edge.findJackWith(garageRoot, edge);
+      const jack = this._garage!.findJackWith(Edge.getGwJackId(edge));
       if (!jack) {
         console.error(
           `Could not find a jack with ${edge.dataset.toVertexId} ${edge.dataset.toJackId}`
@@ -813,17 +910,16 @@ export class VertonVertex extends HTMLElement {
   }
 
   private _moveEdgesWithJacks() {
-    const garageRoot = this._garage!.shadowRoot!;
     this._forEdgesWithJacks((edge, jack) => {
       const centerOfJack = JackOrPlug.centerOf(jack);
-      const plug = Edge.findPlugWith(garageRoot, edge);
+      const plug = this._garage!.findPlugWith(Edge.getGwPlugId(edge));
       if (!plug) {
         console.error(
           `Could not find a plug with ${edge.dataset.toVertexId} ${edge.dataset.toPlugId}`
         );
         return;
       }
-      const centerOfPlug = JackOrPlug.centerOf(plug as Plug.Type);
+      const centerOfPlug = JackOrPlug.centerOf(plug);
       Edge.moveTo(edge, centerOfJack, centerOfPlug);
     });
   }
@@ -857,15 +953,15 @@ export class VertonVertex extends HTMLElement {
   }
 
   private static _appendConfigInputs(
-    configContents: string[],
+    configContents: { [key: string]: number },
     container: HTMLElement
   ) {
     const div = document.createElement("div");
     div.id = "Config-container"; // Capitalize the id to avoid name conflicts.
-    for (const key of configContents) {
+    for (const [key, value] of Object.entries(configContents)) {
       const input = document.createElement("input");
       input.setAttribute("type", "number");
-      input.setAttribute("value", "0");
+      input.setAttribute("value", value.toString());
       input.id = `config-${key}`;
       input.classList.add("config");
 
@@ -877,6 +973,29 @@ export class VertonVertex extends HTMLElement {
       div.appendChild(input);
     }
     container.appendChild(div);
+  }
+
+  toJsObject(): Required<VertonVertexJsObject> {
+    const jso = JSON.parse(this.dataset.initialValues!);
+
+    const config: Config = {};
+    const configElems = this.shadowRoot!.querySelectorAll(".config");
+    for (let i = 0; i < configElems.length; ++i) {
+      const configElem = configElems[i] as HTMLInputElement;
+      const key = configElem.id.slice(CONFIG_ID_PREFIX.length);
+      config[key] = Number(configElem.value);
+    }
+
+    const position = {
+      x: parseInt(this.style.left, 10),
+      y: parseInt(this.style.top, 10),
+    };
+
+    return {
+      ...jso,
+      config,
+      position,
+    };
   }
 }
 
@@ -906,9 +1025,9 @@ namespace JackOrPlug {
 namespace Plug {
   export type Type = HTMLElement;
 
-  export function build(id: PlugId, garage: VertonGarage): Type {
+  export function build(id: GwPlugId, garage: VertonGarage): Type {
     const elem = JackOrPlug.build();
-    elem.dataset.plugId = id.plugName.toString();
+    elem.dataset.plugId = id.plugId.toString();
 
     elem.addEventListener("pointerdown", (e) => {
       if (garage.isDrawingEdge()) {
@@ -926,9 +1045,9 @@ namespace Plug {
 namespace Jack {
   export type Type = HTMLElement;
 
-  export function build(id: JackId, garage: VertonGarage): Type {
+  export function build(id: GwJackId, garage: VertonGarage): Type {
     const elem = JackOrPlug.build();
-    elem.dataset.jackId = id.jackName;
+    elem.dataset.jackId = id.jackId;
 
     elem.addEventListener("pointerup", (e) => {
       if (!garage.isDrawingEdge()) {
