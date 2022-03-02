@@ -3,11 +3,84 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
-    <title>Example Verton Graph</title>
+    <title>簡易的なビジュアルプログラミングツール</title>
     <script type="text/javascript" data-main="umd/index.js"
         src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.22/require.js"></script>
+    <style>
+    #container { display: flex; }
+    .containerElement {
+      border: 1px solid black;
+      margin: 1em 0.5em 0 0.5em;
+    }
+    #code {
+      padding: 0.5em 1.8em;
+      min-width: 900px;
+      min-height: 675px;
+    }
+    .menu, .menu:hover > .submenu {
+      display: inline-block;
+      padding: 0.1em 0.5em;
+    }
+    .menu > a { display: block; }
+    .menu > .submenu {
+      background-color: #FFF;
+      display: none;
+      position: fixed;
+    }
+    #stage, #closeButton {
+      display: none;
+      position: absolute;
+      background-color: white;
+    }
+    #stage {
+      top: 20px;
+      left: 20px;
+    }
+    #closeButton {
+      top: 40px;
+      left: 900px;
+    }
+    </style>
   </head>
   <body>
+  <h1>簡易的なビジュアルプログラミングツール</h1>
+  <div class="menu">
+    <a href="#">入力</a>
+    <div class="submenu">
+      <div><a onclick="addClickInstruction();" href="#">クリック</a></div>
+      <div><a onclick="addConstInstruction();" href="#">定数</a></div>
+    </div>
+  </div>
+  <div class="menu">
+    <a href="#">中間</a>
+    <div class="submenu">
+      <div><a onclick="addGoToInstruction();" href="#">ジャンプ</a></div>
+      <div><a onclick="addGoToIfInstruction();" href="#">条件付きジャンプ</a></div>
+      <div><a onclick="addLabelInstruction();" href="#">ラベル</a></div>
+      <div><a onclick="addComputeInstruction();" href="#">計算</a></div>
+    </div>
+  </div>
+  <div class="menu">
+    <a href="#">出力</a>
+    <div class="submenu">
+      <div><a onclick="addMoveInstruction();" href="#">移動</a></div>
+      <div><a onclick="addWaitInstruction();" href="#">待つ</a></div>
+    </div>
+  </div>
+  <div class="menu">
+    <a href="#">モノ</a>
+    <div class="submenu">
+      <div><a onclick="addObjectInstruction('🐶');" href="#">🐶</a></div>
+      <div><a onclick="addObjectInstruction('😺');" href="#">😺</a></div>
+      <div><a onclick="addObjectInstruction('🙂');" href="#">🙂</a></div>
+    </div>
+  </div>
+  <div class="menu"><a href="#" onclick="play();">Play</a></div>
+  <div id="container">
+    <ol class="containerElement" id="code"></ol>
+    <svg class="containerElement" id="stage" width="900" height="675" xmlns="http://www.w3.org/2000/svg"></svg>
+    <button id="closeButton" onclick="stopPlaying()">X</button>
+  </div>
   <verton-garage>
   </verton-garage>
   </body>
