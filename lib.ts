@@ -75,7 +75,6 @@ export class VertonGarage extends HTMLElement {
     const style = document.createElement("style");
     style.textContent = `
       :host {
-        height: 2000px;
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;

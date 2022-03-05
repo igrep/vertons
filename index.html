@@ -7,26 +7,86 @@
     <script type="text/javascript" data-main="umd/index.js"
         src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.22/require.js"></script>
     <style>
-    #container { display: flex; }
     .containerElement {
-      border: 1px solid black;
+      width: 1600px;
+      height: 900px;
+      margin: 0 0.5em 0 0.5em;
+    }
+
+    .menuBar {
       margin: 1em 0.5em 0 0.5em;
+      --submenu-width: 7.5em;
+      --vertical-padding: 0.5em;
+
+      /* https://qiita.com/BEMU/items/0f500e0306471073ed63 */
+      letter-spacing: -0.4em;
     }
-    #code {
-      padding: 0.5em 1.8em;
-      min-width: 900px;
-      min-height: 675px;
+    .menuBar > .menu {
+      width: 3em;
+      border-color: var(--menu-color);
+      background-color: var(--menu-color);
+      padding: var(--vertical-padding) 1em;
+      letter-spacing: normal;
     }
-    .menu, .menu:hover > .submenu {
+    .menuBar > .menu > a {
+      text-align: center;
+      color: #FFFFFF;
+      font-weight: bold;
+    }
+    .menuBar > .menu > .submenu {
+      margin-top: var(--vertical-padding);
+    }
+    .menu {
       display: inline-block;
-      padding: 0.1em 0.5em;
+      position: relative;
+      width: var(--submenu-width);
     }
-    .menu > a { display: block; }
-    .menu > .submenu {
-      background-color: #FFF;
+    .menu a {
+      cursor: pointer;
+      display: block;
+    }
+    .menu:hover > .submenu {
+      display: block;
+    }
+    .submenu > .menu:hover > .submenu {
+      display: block;
+    }
+    .submenu {
+      border-left: 3px solid var(--menu-color);
+      border-right: 3px solid var(--menu-color);
+      border-bottom: 3px solid var(--menu-color);
+      border-radius: 0px 5px 5px 5px;
+
       display: none;
-      position: fixed;
+      position: absolute;
+      left: 0px;
+      width: var(--submenu-width);
     }
+    .submenu a {
+      border-top: 3px solid var(--menu-color);
+      color: var(--menu-color);
+      padding: 0.5em 0.5em 0.5em 1em;
+      background-color: #FFFFFF;
+    }
+    .submenu a:hover {
+      background-color: #FFEC00;
+    }
+    .submenu .submenu {
+      left: var(--submenu-width);
+      top: 0px;
+    }
+    .submenu > .menu > a {
+      display: flex;
+      flex-flow: row nowrap;
+      justify-content: space-between;
+    }
+    .submenu > .menu > a:after {
+      display: block;
+      text-align: right;
+      content: "›";
+      font-weight: bold;
+    }
+
     #stage, #closeButton {
       display: none;
       position: absolute;
@@ -44,44 +104,55 @@
   </head>
   <body>
   <h1>「ナビつき！つくってわかる はじめてゲームプログラミング」風の何か</h1>
-  <div class="menu">
-    <a href="#">入力</a>
-    <div class="submenu">
-      <div><a onclick="addClickInstruction();" href="#">クリック</a></div>
-      <div><a onclick="addConstInstruction();" href="#">定数</a></div>
+  <div class="menuBar">
+    <div class="menu" style="--menu-color: #FF004C;">
+      <a>入力</a>
+      <div class="submenu">
+        <a class="js-menuItem" data-handler="addClickInstruction">クリック</a>
+        <a class="js-menuItem" data-handler="addConstInstruction">定数</a>
+        <a class="js-menuItem" data-handler="addComputeInstruction">経過時間</a>
+      </div>
     </div>
-  </div>
-  <div class="menu">
-    <a href="#">中間</a>
-    <div class="submenu">
-      <div><a onclick="addGoToInstruction();" href="#">ジャンプ</a></div>
-      <div><a onclick="addGoToIfInstruction();" href="#">条件付きジャンプ</a></div>
-      <div><a onclick="addLabelInstruction();" href="#">ラベル</a></div>
-      <div><a onclick="addComputeInstruction();" href="#">計算</a></div>
+    <div class="menu" style="--menu-color: #00AD7C;">
+      <a>中間</a>
+      <div class="submenu">
+        <div class="menu">
+          <a>くらべる</a>
+          <div class="submenu">
+            <a class="js-menuItem" data-handler="addComputeInstruction">=</a>
+            <a class="js-menuItem" data-handler="addComputeInstruction">≠</a>
+            <a class="js-menuItem" data-handler="addComputeInstruction">&lt;</a>
+            <a class="js-menuItem" data-handler="addComputeInstruction">≦</a>
+            <a class="js-menuItem" data-handler="addComputeInstruction">&gt;</a>
+            <a class="js-menuItem" data-handler="addComputeInstruction">≧</a>
+          </div>
+        </div>
+        <div class="menu">
+          <a>けいさん</a>
+          <div class="submenu">
+            <a class="js-menuItem" data-handler="addComputeInstruction">+</a>
+            <a class="js-menuItem" data-handler="addComputeInstruction">-</a>
+            <a class="js-menuItem" data-handler="addComputeInstruction">*</a>
+            <a class="js-menuItem" data-handler="addComputeInstruction">/</a>
+          </div>
+        </div>
+        <a class="js-menuItem" data-handler="addComputeInstruction">カウンター</a>
+        <a class="js-menuItem" data-handler="addComputeInstruction">フラグ</a>
+      </div>
     </div>
-  </div>
-  <div class="menu">
-    <a href="#">出力</a>
-    <div class="submenu">
-      <div><a onclick="addMoveInstruction();" href="#">移動</a></div>
-      <div><a onclick="addWaitInstruction();" href="#">待つ</a></div>
+    <div class="menu" style="--menu-color: #F55F00;">
+      <a>モノ</a>
+      <div class="submenu">
+        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="🐶">🐶</a>
+        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="😺">😺</a>
+        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="🙂">🙂</a>
+      </div>
     </div>
+    <div class="menu"><a onclick="play();">Play</a></div>
   </div>
-  <div class="menu">
-    <a href="#">モノ</a>
-    <div class="submenu">
-      <div><a onclick="addObjectInstruction('🐶');" href="#">🐶</a></div>
-      <div><a onclick="addObjectInstruction('😺');" href="#">😺</a></div>
-      <div><a onclick="addObjectInstruction('🙂');" href="#">🙂</a></div>
-    </div>
-  </div>
-  <div class="menu"><a href="#" onclick="play();">Play</a></div>
-  <div id="container">
-    <ol class="containerElement" id="code"></ol>
-    <svg class="containerElement" id="stage" width="900" height="675" xmlns="http://www.w3.org/2000/svg"></svg>
-    <button id="closeButton" onclick="stopPlaying()">X</button>
-  </div>
-  <verton-garage>
+  <svg class="containerElement" id="stage" width="900" height="675" xmlns="http://www.w3.org/2000/svg"></svg>
+  <button id="closeButton" onclick="stopPlaying()">X</button>
+  <verton-garage class="containerElement">
   </verton-garage>
   </body>
 </html>
