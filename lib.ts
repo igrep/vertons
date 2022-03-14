@@ -10,7 +10,7 @@ export type VertonVertexJsObject = {
   config?: Config;
   jacks?: JackJsObject[];
   colors?: Partial<Colors>;
-  position: Point;
+  position?: Point;
 };
 
 type Config = { [key: string]: number };
@@ -128,6 +128,7 @@ export class VertonGarage extends HTMLElement {
         config: [],
         jacks: [],
         colors: {},
+        position: this._searchPosition(),
         _id: this._generateNewId(),
       },
       spec
@@ -233,6 +234,23 @@ export class VertonGarage extends HTMLElement {
     }
   }
 
+  private _searchPosition(): Point {
+    const points: Point[] = [];
+    const vertexElems = this._getVertexesContainer().getElementsByTagName(
+      "verton-vertex"
+    ) as HTMLCollectionOf<VertonVertex>;
+    for (let i = 0; i < vertexElems.length; ++i) {
+      points.push(vertexElems[i].getPosition());
+    }
+    const { right: x, bottom: y } = getBoundingPageRect(this);
+    const result = VertonGarage.findNonOverlappingPoint({ x, y }, points);
+    if (result === undefined) {
+      console.warn("Could not find a non-overlapping point");
+      return { x: 0, y: 0 };
+    }
+    return result;
+  }
+
   private _generateNewId(): VertexId {
     const id = this._lastVertexId;
     this._lastVertexId++;
@@ -245,6 +263,42 @@ export class VertonGarage extends HTMLElement {
 
   private _getEdgesContainer(): HTMLElement {
     return this.shadowRoot!.getElementById("edges")!;
+  }
+
+  static findNonOverlappingPoint(
+    endPoint: Point,
+    points: Point[]
+  ): Point | undefined {
+    const threshold = 20;
+
+    let pO = { x: 0, y: 0 };
+    let pE = endPoint;
+
+    const pointsByX = points.sort((pa, pb) => pa.x - pb.x);
+    pointsByX.unshift(pO);
+    pointsByX.push(pE);
+    for (let i = 1; i < pointsByX.length; ++i) {
+      const xa = pointsByX[i - 1].x;
+      const xb = pointsByX[i].x;
+      const diff = xa - xb;
+      if (diff >= threshold) {
+        const midX = xa + diff / 2;
+        return { x: midX, y: midX };
+      }
+    }
+
+    const pointsByY = points.sort((pa, pb) => pa.y - pb.y);
+    pointsByY.unshift(pO);
+    pointsByY.push(pE);
+    for (let i = 1; i < pointsByY.length; ++i) {
+      const ya = pointsByY[i - 1].y;
+      const yb = pointsByY[i].y;
+      const diff = ya - yb;
+      if (diff >= threshold) {
+        const midY = ya + diff / 2;
+        return { x: midY, y: midY };
+      }
+    }
   }
 }
 
@@ -755,6 +809,13 @@ export class VertonVertex extends HTMLElement {
     return obj;
   }
 
+  getPosition(): Point {
+    return {
+      x: parseInt(this.style.left, 10),
+      y: parseInt(this.style.top, 10),
+    };
+  }
+
   setColors(colors: Partial<Colors>) {
     if (colors.window) {
       this.style.setProperty("--color-window", colors.window);
@@ -992,10 +1053,7 @@ export class VertonVertex extends HTMLElement {
       config[key] = Number(configElem.value);
     }
 
-    const position = {
-      x: parseInt(this.style.left, 10),
-      y: parseInt(this.style.top, 10),
-    };
+    const position = this.getPosition();
 
     return {
       ...jso,
