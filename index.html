@@ -8,8 +8,8 @@
         src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.22/require.js"></script>
     <style>
     .containerElement {
-      width: 1600px;
-      height: 900px;
+      width: 1280px;
+      height: 720px;
       margin: 0 0.5em 0 0.5em;
     }
 
@@ -112,40 +112,41 @@
       <a>中間</a>
       <div class="submenu">
         <div class="menu">
-          <a>くらべる</a>
+          <a>けいさん</a>
           <div class="submenu">
-            <a class="js-menuItem" data-handler="addComputeInstruction">=</a>
-            <a class="js-menuItem" data-handler="addComputeInstruction">≠</a>
-            <a class="js-menuItem" data-handler="addComputeInstruction">&lt;</a>
-            <a class="js-menuItem" data-handler="addComputeInstruction">≦</a>
-            <a class="js-menuItem" data-handler="addComputeInstruction">&gt;</a>
-            <a class="js-menuItem" data-handler="addComputeInstruction">≧</a>
+            <a class="js-menuItem" data-handler="addArithmeticInstruction" data-argument="+">+</a>
+            <a class="js-menuItem" data-handler="addArithmeticInstruction" data-argument="-">-</a>
+            <a class="js-menuItem" data-handler="addArithmeticInstruction" data-argument="*">*</a>
+            <a class="js-menuItem" data-handler="addArithmeticInstruction" data-argument="/">/</a>
           </div>
         </div>
         <div class="menu">
-          <a>けいさん</a>
+          <a>くらべる</a>
           <div class="submenu">
-            <a class="js-menuItem" data-handler="addComputeInstruction">+</a>
-            <a class="js-menuItem" data-handler="addComputeInstruction">-</a>
-            <a class="js-menuItem" data-handler="addComputeInstruction">*</a>
-            <a class="js-menuItem" data-handler="addComputeInstruction">/</a>
+            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="=">=</a>
+            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="&lt;">&lt;</a>
+            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="≦">≦</a>
+            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="&gt;">&gt;</a>
+            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="≧">≧</a>
           </div>
         </div>
-        <a class="js-menuItem" data-handler="addComputeInstruction">カウンター</a>
-        <a class="js-menuItem" data-handler="addComputeInstruction">フラグ</a>
+        <a class="js-menuItem" data-handler="addCounterInstruction">カウンター</a>
+        <a class="js-menuItem" data-handler="addFlagInstruction">フラグ</a>
+        <a class="js-menuItem" data-handler="addNotInstruction">NOT</a>
+        <a class="js-menuItem" data-handler="addAndInstruction">AND</a>
       </div>
     </div>
     <div class="menu" style="--menu-color: #F55F00;">
       <a>モノ</a>
       <div class="submenu">
-        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="🐶">🐶</a>
-        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="😺">😺</a>
-        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="🙂">🙂</a>
+        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="🐶">🐶 イヌ</a>
+        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="😺">😺 ネコ</a>
+        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="🙂">🙂 ヒト</a>
       </div>
     </div>
-    <div class="menu"><a onclick="play();">Play</a></div>
+    <div class="menu" style="--menu-color: #000000;"><a data-handler="play">▶</a></div>
   </div>
-  <svg class="containerElement" id="stage" width="900" height="675" xmlns="http://www.w3.org/2000/svg"></svg>
+  <svg class="containerElement" id="stage" xmlns="http://www.w3.org/2000/svg"></svg>
   <button id="closeButton" onclick="stopPlaying()">X</button>
   <verton-garage class="containerElement">
   </verton-garage>
