@@ -80,6 +80,7 @@ export class VertonGarage extends HTMLElement {
         flex-wrap: wrap;
         justify-content: space-around;
         background-color: ${BACKGROUND_COLOR};
+        position: relative;
       }
       .edge {
         position: absolute;
@@ -108,10 +109,7 @@ export class VertonGarage extends HTMLElement {
       }
       e.preventDefault();
       const p1 = this._currentlyDrawing.from;
-      const p2 = {
-        x: e.pageX,
-        y: e.pageY,
-      };
+      const p2 = this.pagePointerToGaragePoint(e);
       Edge.moveTo(this._currentlyDrawing.edge, p1, p2);
     });
 
@@ -144,8 +142,8 @@ export class VertonGarage extends HTMLElement {
     const edge = Edge.create(
       from,
       centerOfPlug,
-      clickedPoint,
-      this.closeButton
+      this.pagePointerToGaragePoint(clickedPoint),
+      this
     );
     this._currentlyDrawing = { edge, from: centerOfPlug };
     this._getEdgesContainer().append(edge);
@@ -219,19 +217,35 @@ export class VertonGarage extends HTMLElement {
     this._lastVertexId = maxVertexId;
     for (const { from, to } of edges) {
       const plug = this.findPlugWith(from)!;
-      const centerOfPlug = JackOrPlug.centerOf(plug);
-      const edgeElem = Edge.create(
-        from,
-        centerOfPlug,
-        { pageX: centerOfPlug.x, pageY: centerOfPlug.y },
-        this.closeButton
-      );
+      const centerOfPlug = JackOrPlug.centerOf(plug, this);
+      const edgeElem = Edge.create(from, centerOfPlug, centerOfPlug, this);
       const jack = this.findJackWith(to)!;
-      const centerOfJack = JackOrPlug.centerOf(jack);
+      const centerOfJack = JackOrPlug.centerOf(jack, this);
       Edge.moveTo(edgeElem, centerOfPlug, centerOfJack);
       Edge.connectTo(edgeElem, to);
       this._getEdgesContainer().append(edgeElem);
     }
+  }
+
+  getBoundingGarageRect(elem: Element): Rect {
+    const garageRect = this.getBoundingClientRect();
+    const elemRect = elem.getBoundingClientRect();
+    return {
+      width: elemRect.width,
+      height: elemRect.height,
+      left: elemRect.left - garageRect.left,
+      right: elemRect.right - garageRect.right,
+      top: elemRect.top - garageRect.top,
+      bottom: elemRect.bottom - garageRect.bottom,
+    };
+  }
+
+  pagePointerToGaragePoint({ pageX, pageY }: PagePointer): Point {
+    const { left, top } = this.getBoundingClientRect();
+    return {
+      x: pageX - left,
+      y: pageY - top,
+    };
   }
 
   private _searchPosition(): Point {
@@ -242,7 +256,7 @@ export class VertonGarage extends HTMLElement {
     for (let i = 0; i < vertexElems.length; ++i) {
       points.push(vertexElems[i].getPosition());
     }
-    const { right: x, bottom: y } = getBoundingPageRect(this);
+    const { width: x, height: y } = this.getBoundingClientRect();
     const result = VertonGarage.findNonOverlappingPoint({ x, y }, points);
     if (result === undefined) {
       console.warn("Could not find a non-overlapping point");
@@ -314,19 +328,13 @@ export namespace Edge {
   export function create(
     { vertexId, plugId }: GwPlugId,
     centerOfPlug: Point,
-    { pageX, pageY }: PagePointer,
-    closeButton: CloseButton
+    clickedPoint: Point,
+    garage: VertonGarage
   ): Type {
-    const {
-      top,
-      left,
-      width,
-      height,
-      x1,
-      y1,
-      x2,
-      y2,
-    } = calcEdgeDef(centerOfPlug, { x: pageX, y: pageY });
+    const { top, left, width, height, x1, y1, x2, y2 } = calcEdgeDef(
+      centerOfPlug,
+      clickedPoint
+    );
 
     const edge = document.createElementNS(SVG_NS, "svg");
     edge.classList.add("edge");
@@ -350,8 +358,8 @@ export namespace Edge {
     line.addEventListener("pointerup", (e) => {
       e.preventDefault();
       if (hasConnectedToAny(edge)) {
-        const { left, width, top, height } = getBoundingPageRect(edge);
-        closeButton.show({
+        const { left, width, top, height } = garage.getBoundingGarageRect(edge);
+        garage.closeButton.show({
           at: { x: left + width / 2, y: top + height / 2 },
           for: () => [edge],
         });
@@ -689,10 +697,7 @@ export class VertonVertex extends HTMLElement {
   private _onPointerDown(e: PointerEvent) {
     e.preventDefault();
     this._garage!.closeButton!.hide();
-    this._movingFrom = {
-      x: e.pageX,
-      y: e.pageY,
-    };
+    this._movingFrom = this._garage!.pagePointerToGaragePoint(e);
     this._garage!.raiseToTop(this);
     this.setPointerCapture(e.pointerId);
   }
@@ -703,32 +708,28 @@ export class VertonVertex extends HTMLElement {
       return;
     }
 
-    const newX = e.pageX;
-    const newY = e.pageY;
+    const { x: newX, y: newY } = this._garage!.pagePointerToGaragePoint(e);
     const dx = newX - this._movingFrom.x;
     const dy = newY - this._movingFrom.y;
 
     this._movingFrom.x = newX;
     this._movingFrom.y = newY;
 
-    const rect = getBoundingPageRect(this);
+    const rect = this._garage!.getBoundingGarageRect(this);
     const newLeft = rect.left + dx;
     const newTop = rect.top + dy;
 
     const {
-      left: garageLeft,
-      right: garageRight,
-      top: garageTop,
-      bottom: garageBottom,
-    } = getBoundingPageRect(this._garage!);
-
+      width: garageWidth,
+      height: garageHeight,
+    } = this._garage!.getBoundingClientRect();
     const newLeftClamped = Math.min(
-      Math.max(newLeft, garageLeft),
-      garageRight - rect.width
+      Math.max(newLeft, 0),
+      garageWidth - rect.width
     );
     const newTopClamped = Math.min(
-      Math.max(newTop, garageTop),
-      garageBottom - rect.height
+      Math.max(newTop, 0),
+      garageHeight - rect.height
     );
 
     this._setX(newLeftClamped);
@@ -739,7 +740,7 @@ export class VertonVertex extends HTMLElement {
   }
 
   private _onPointerUp(e: PointerEvent) {
-    const { right: x, top: y } = getBoundingPageRect(
+    const { right: x, top: y } = this._garage!.getBoundingGarageRect(
       this.shadowRoot!.getElementById("inner")!
     );
     this._garage!.closeButton!.show({
@@ -956,7 +957,7 @@ export class VertonVertex extends HTMLElement {
 
   private _moveEdgesWithPlugs() {
     this._forEdgesWithPlugs((edge, plug) => {
-      const centerOfPlug = JackOrPlug.centerOf(plug);
+      const centerOfPlug = JackOrPlug.centerOf(plug, this._garage!);
       const jack = this._garage!.findJackWith(Edge.getGwJackId(edge));
       if (!jack) {
         console.error(
@@ -964,14 +965,14 @@ export class VertonVertex extends HTMLElement {
         );
         return;
       }
-      const centerOfJack = JackOrPlug.centerOf(jack);
+      const centerOfJack = JackOrPlug.centerOf(jack, this._garage!);
       Edge.moveTo(edge, centerOfPlug, centerOfJack);
     });
   }
 
   private _moveEdgesWithJacks() {
     this._forEdgesWithJacks((edge, jack) => {
-      const centerOfJack = JackOrPlug.centerOf(jack);
+      const centerOfJack = JackOrPlug.centerOf(jack, this._garage!);
       const plug = this._garage!.findPlugWith(Edge.getGwPlugId(edge));
       if (!plug) {
         console.error(
@@ -979,7 +980,7 @@ export class VertonVertex extends HTMLElement {
         );
         return;
       }
-      const centerOfPlug = JackOrPlug.centerOf(plug);
+      const centerOfPlug = JackOrPlug.centerOf(plug, this._garage!);
       Edge.moveTo(edge, centerOfJack, centerOfPlug);
     });
   }
@@ -1077,8 +1078,8 @@ namespace JackOrPlug {
     return elem;
   }
 
-  export function centerOf(elem: HTMLElement): Point {
-    const rect = getBoundingPageRect(elem);
+  export function centerOf(elem: HTMLElement, garage: VertonGarage): Point {
+    const rect = garage.getBoundingGarageRect(elem);
     return {
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
@@ -1098,7 +1099,7 @@ namespace Plug {
         return;
       }
       e.stopPropagation();
-      const centerOfPlug = JackOrPlug.centerOf(elem);
+      const centerOfPlug = JackOrPlug.centerOf(elem, garage);
       garage.startDrawingEdge(id, centerOfPlug, e);
     });
 
@@ -1118,14 +1119,14 @@ namespace Jack {
         return;
       }
       e.stopPropagation();
-      garage.finishDrawingEdge(id, JackOrPlug.centerOf(elem));
+      garage.finishDrawingEdge(id, JackOrPlug.centerOf(elem, garage));
     });
     elem.addEventListener("pointerdown", (e) => {
       if (!garage.isDrawingEdge()) {
         return;
       }
       e.stopPropagation();
-      garage.finishDrawingEdge(id, JackOrPlug.centerOf(elem));
+      garage.finishDrawingEdge(id, JackOrPlug.centerOf(elem, garage));
     });
 
     return elem;
@@ -1215,17 +1216,4 @@ export function activateWebComponents() {
   )) {
     customElements.define(elementName, componentClass);
   }
-}
-
-function getBoundingPageRect(elem: Element): Rect {
-  const originalRect = elem.getBoundingClientRect();
-
-  return {
-    left: originalRect.left + window.scrollX,
-    top: originalRect.top + window.scrollY,
-    right: originalRect.right + window.scrollX,
-    bottom: originalRect.bottom + window.scrollY,
-    width: originalRect.width,
-    height: originalRect.height,
-  };
 }
