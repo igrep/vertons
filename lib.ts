@@ -230,13 +230,15 @@ export class VertonGarage extends HTMLElement {
   getBoundingGarageRect(elem: Element): Rect {
     const garageRect = this.getBoundingClientRect();
     const elemRect = elem.getBoundingClientRect();
+    const left = elemRect.left - garageRect.left;
+    const top = elemRect.top - garageRect.top;
     return {
       width: elemRect.width,
       height: elemRect.height,
-      left: elemRect.left - garageRect.left,
-      right: elemRect.right - garageRect.right,
-      top: elemRect.top - garageRect.top,
-      bottom: elemRect.bottom - garageRect.bottom,
+      left,
+      right: left + elemRect.width,
+      top,
+      bottom: top + elemRect.height,
     };
   }
 
