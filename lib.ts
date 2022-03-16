@@ -285,34 +285,32 @@ export class VertonGarage extends HTMLElement {
     endPoint: Point,
     points: Point[]
   ): Point | undefined {
-    const threshold = 20;
+    const threshold = 80;
 
     let pO = { x: 0, y: 0 };
     let pE = endPoint;
 
-    const pointsByX = points.sort((pa, pb) => pa.x - pb.x);
-    pointsByX.unshift(pO);
-    pointsByX.push(pE);
-    for (let i = 1; i < pointsByX.length; ++i) {
-      const xa = pointsByX[i - 1].x;
-      const xb = pointsByX[i].x;
-      const diff = xa - xb;
+    points.sort((pa, pb) => pa.x - pb.x);
+    points.unshift(pO);
+    points.push(pE);
+    for (let i = 1; i < points.length; ++i) {
+      const { x: xa, y } = points[i - 1];
+      const xb = points[i].x;
+      const diff = xb - xa;
       if (diff >= threshold) {
         const midX = xa + diff / 2;
-        return { x: midX, y: midX };
+        return { x: midX, y: y + threshold };
       }
     }
 
-    const pointsByY = points.sort((pa, pb) => pa.y - pb.y);
-    pointsByY.unshift(pO);
-    pointsByY.push(pE);
-    for (let i = 1; i < pointsByY.length; ++i) {
-      const ya = pointsByY[i - 1].y;
-      const yb = pointsByY[i].y;
-      const diff = ya - yb;
+    points.sort((pa, pb) => pa.y - pb.y);
+    for (let i = 1; i < points.length; ++i) {
+      const { x, y: ya } = points[i - 1];
+      const yb = points[i].y;
+      const diff = yb - ya;
       if (diff >= threshold) {
         const midY = ya + diff / 2;
-        return { x: midY, y: midY };
+        return { x: x + threshold, y: midY };
       }
     }
   }
