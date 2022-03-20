@@ -33,6 +33,22 @@
       color: #FFFFFF;
       font-weight: bold;
     }
+    .menu.saveLoad {
+      --border-width: 3px;
+      text-align: center;
+      border-top: var(--border-width) solid #000000;
+      border-right: var(--border-width) solid #000000;
+      background-color: #FFFFFF;
+      padding-top: calc(var(--vertical-padding) - var(--border-width) + 0.25px);
+    }
+    .menu.saveLoad:hover {
+      background-image: linear-gradient(-45deg, #57E4FA 25%, #5FEDFC 25%, #5FEDFC 50%, #57E4FA 50%, #57E4FA 75%, #5FEDFC 75%);
+      background-size: 15px 15px;
+    }
+    .menu.saveLoad > a {
+      font-weight: normal;
+      color: #000000;
+    }
     .menuBar > .menu > .submenu {
       margin-top: var(--vertical-padding);
     }
@@ -40,9 +56,9 @@
       display: inline-block;
       position: relative;
       width: var(--submenu-width);
+      cursor: pointer;
     }
     .menu a {
-      cursor: pointer;
       display: block;
     }
     .menu:hover > .submenu {
@@ -100,13 +116,13 @@
   </head>
   <body>
   <h1>「ナビつき！つくってわかる はじめてゲームプログラミング」風の何か</h1>
-  <div class="menuBar">
+  <div class="js-menuBar menuBar">
     <div class="menu" style="--menu-color: #FF004C;">
       <a>入力</a>
       <div class="submenu">
-        <a class="js-menuItem" data-handler="addClickInstruction">クリック</a>
-        <a class="js-menuItem" data-handler="addConstInstruction">定数</a>
-        <a class="js-menuItem" data-handler="addComputeInstruction">経過時間</a>
+        <a data-handler="addClickInstruction">クリック</a>
+        <a data-handler="addConstInstruction">定数</a>
+        <a data-handler="addTimeInstruction">経過時間</a>
       </div>
     </div>
     <div class="menu" style="--menu-color: #00AD7C;">
@@ -115,37 +131,38 @@
         <div class="menu">
           <a>けいさん</a>
           <div class="submenu">
-            <a class="js-menuItem" data-handler="addArithmeticInstruction" data-argument="+">+</a>
-            <a class="js-menuItem" data-handler="addArithmeticInstruction" data-argument="-">-</a>
-            <a class="js-menuItem" data-handler="addArithmeticInstruction" data-argument="*">*</a>
-            <a class="js-menuItem" data-handler="addArithmeticInstruction" data-argument="/">/</a>
+            <a data-handler="addArithmeticInstruction" data-argument="+">+</a>
+            <a data-handler="addArithmeticInstruction" data-argument="-">-</a>
+            <a data-handler="addArithmeticInstruction" data-argument="×">×</a>
+            <a data-handler="addArithmeticInstruction" data-argument="÷">÷</a>
           </div>
         </div>
         <div class="menu">
           <a>くらべる</a>
           <div class="submenu">
-            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="=">=</a>
-            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="&lt;">&lt;</a>
-            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="≦">≦</a>
-            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="&gt;">&gt;</a>
-            <a class="js-menuItem" data-handler="addComparisonInstruction" data-argument="≧">≧</a>
+            <a data-handler="addComparisonInstruction" data-argument="=">=</a>
+            <a data-handler="addComparisonInstruction" data-argument="&lt;">&lt;</a>
+            <a data-handler="addComparisonInstruction" data-argument="≦">≦</a>
+            <a data-handler="addComparisonInstruction" data-argument="&gt;">&gt;</a>
+            <a data-handler="addComparisonInstruction" data-argument="≧">≧</a>
           </div>
         </div>
-        <a class="js-menuItem" data-handler="addCounterInstruction">カウンター</a>
-        <a class="js-menuItem" data-handler="addFlagInstruction">フラグ</a>
-        <a class="js-menuItem" data-handler="addNotInstruction">NOT</a>
-        <a class="js-menuItem" data-handler="addAndInstruction">AND</a>
+        <a data-handler="addCounterInstruction">カウンター</a>
+        <a data-handler="addNotInstruction">NOT</a>
+        <a data-handler="addAndInstruction">AND</a>
       </div>
     </div>
     <div class="menu" style="--menu-color: #F55F00;">
       <a>モノ</a>
       <div class="submenu">
-        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="🐶">🐶 イヌ</a>
-        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="😺">😺 ネコ</a>
-        <a class="js-menuItem" data-handler="addObjectInstruction" data-argument="🙂">🙂 ヒト</a>
+        <a data-handler="addObjectInstruction" data-argument="🐶">🐶 イヌ</a>
+        <a data-handler="addObjectInstruction" data-argument="😺">😺 ネコ</a>
+        <a data-handler="addObjectInstruction" data-argument="🙂">🙂 ヒト</a>
       </div>
     </div>
-    <div class="menu" style="--menu-color: #000000;"><a data-handler="play">▶</a></div>
+    <div class="menu" style="--menu-color: #000000;" data-handler="play"><a>▶</a></div>
+    <div class="menu saveLoad" data-handler="save">保存</div>
+    <div class="menu saveLoad" data-handler="load">再開</div>
   </div>
   <svg class="containerElement" id="stage" xmlns="http://www.w3.org/2000/svg"></svg>
   <button id="closeButton" onclick="stopPlaying()">X</button>
