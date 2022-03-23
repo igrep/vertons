@@ -7,10 +7,14 @@
     <script type="text/javascript" data-main="umd/index.js"
         src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.22/require.js"></script>
     <style>
+    .container {
+      position: relative;
+    }
     .containerElement {
       width: 1280px;
       height: 720px;
       margin: 0 0.5em 0 0.5em;
+      position: absolute;
     }
 
     .menuBar {
@@ -21,33 +25,17 @@
       /* https://qiita.com/BEMU/items/0f500e0306471073ed63 */
       letter-spacing: -0.4em;
     }
+    .topItem {
+      text-align: center;
+      color: #FFFFFF;
+      font-weight: bold;
+    }
     .menuBar > .menu {
       width: 3em;
       border-color: var(--menu-color);
       background-color: var(--menu-color);
       padding: var(--vertical-padding) 1em;
       letter-spacing: normal;
-    }
-    .menuBar > .menu > a {
-      text-align: center;
-      color: #FFFFFF;
-      font-weight: bold;
-    }
-    .menu.saveLoad {
-      --border-width: 3px;
-      text-align: center;
-      border-top: var(--border-width) solid #000000;
-      border-right: var(--border-width) solid #000000;
-      background-color: #FFFFFF;
-      padding-top: calc(var(--vertical-padding) - var(--border-width) + 0.25px);
-    }
-    .menu.saveLoad:hover {
-      background-image: linear-gradient(-45deg, #57E4FA 25%, #5FEDFC 25%, #5FEDFC 50%, #57E4FA 50%, #57E4FA 75%, #5FEDFC 75%);
-      background-size: 15px 15px;
-    }
-    .menu.saveLoad > a {
-      font-weight: normal;
-      color: #000000;
     }
     .menuBar > .menu > .submenu {
       margin-top: var(--vertical-padding);
@@ -99,74 +87,97 @@
       font-weight: bold;
     }
 
-    #stage, #closeButton {
+    /* Other special menu items */
+    .menu.saveLoad {
+      --border-width: 3px;
+      border-top: var(--border-width) solid #000000;
+      border-right: var(--border-width) solid #000000;
+      background-color: #FFFFFF;
+      padding-top: calc(var(--vertical-padding) - var(--border-width) + 0.25px);
+      font-weight: normal;
+      color: #000000;
+    }
+    .saveLoad:hover {
+      background-image: linear-gradient(-45deg, #57E4FA 25%, #5FEDFC 25%, #5FEDFC 50%, #57E4FA 50%, #57E4FA 75%, #5FEDFC 75%);
+      background-size: 15px 15px;
+    }
+    .replay, .reedit {
+      background-image: linear-gradient(-45deg, #020303 25%, #303332 25%, #303332 50%, #020303 50%, #020303 75%, #303332 75%);
+      background-size: 15px 15px;
+      margin-right: 0.5em;
+    }
+    .replay:hover {
+      background-image: linear-gradient(-45deg, #FFF145 25%, #FFF149 25%, #FFF149 50%, #FFF145 50%, #FFF145 75%, #FFF149 75%);
+    }
+    .reedit:hover {
+      background-image: linear-gradient(-45deg, #07936B 25%, #259B74 25%, #259B74 50%, #07936B 50%, #07936B 75%, #259B74 75%);
+    }
+
+    /* Initial value for JavaScript*/
+    #js-stage, .js-showWhenPlay {
       display: none;
-      position: absolute;
-      background-color: white;
-    }
-    #stage {
-      top: 20px;
-      left: 20px;
-    }
-    #closeButton {
-      top: 40px;
-      left: 900px;
     }
     </style>
   </head>
   <body>
   <h1>「ナビつき！つくってわかる はじめてゲームプログラミング」風の何か</h1>
-  <div class="js-menuBar menuBar">
-    <div class="menu" style="--menu-color: #FF004C;">
-      <a>入力</a>
-      <div class="submenu">
-        <a data-handler="addClickInstruction">クリック</a>
-        <a data-handler="addConstInstruction">定数</a>
-        <a data-handler="addTimeInstruction">経過時間</a>
-      </div>
-    </div>
-    <div class="menu" style="--menu-color: #00AD7C;">
-      <a>中間</a>
-      <div class="submenu">
-        <div class="menu">
-          <a>けいさん</a>
-          <div class="submenu">
-            <a data-handler="addArithmeticInstruction" data-argument="+">+</a>
-            <a data-handler="addArithmeticInstruction" data-argument="-">-</a>
-            <a data-handler="addArithmeticInstruction" data-argument="×">×</a>
-            <a data-handler="addArithmeticInstruction" data-argument="÷">÷</a>
-          </div>
+  <div class="js-menuBars">
+    <div class="js-showWhenEdit menuBar">
+      <div class="menu topItem" style="--menu-color: #000000;" data-handler="play">▶</div>
+      <div class="menu" style="--menu-color: #FF004C;">
+        <a class="topItem">入力</a>
+        <div class="submenu">
+          <a data-handler="addClickInstruction">クリック</a>
+          <a data-handler="addConstInstruction">定数</a>
+          <a data-handler="addTimeInstruction">経過時間</a>
         </div>
-        <div class="menu">
-          <a>くらべる</a>
-          <div class="submenu">
-            <a data-handler="addComparisonInstruction" data-argument="=">=</a>
-            <a data-handler="addComparisonInstruction" data-argument="&lt;">&lt;</a>
-            <a data-handler="addComparisonInstruction" data-argument="≦">≦</a>
-            <a data-handler="addComparisonInstruction" data-argument="&gt;">&gt;</a>
-            <a data-handler="addComparisonInstruction" data-argument="≧">≧</a>
+      </div>
+      <div class="menu" style="--menu-color: #00AD7C;">
+        <a class="topItem">中間</a>
+        <div class="submenu">
+          <div class="menu">
+            <a>けいさん</a>
+            <div class="submenu">
+              <a data-handler="addArithmeticInstruction" data-argument="+">+</a>
+              <a data-handler="addArithmeticInstruction" data-argument="-">-</a>
+              <a data-handler="addArithmeticInstruction" data-argument="×">×</a>
+              <a data-handler="addArithmeticInstruction" data-argument="÷">÷</a>
+            </div>
           </div>
+          <div class="menu">
+            <a>くらべる</a>
+            <div class="submenu">
+              <a data-handler="addComparisonInstruction" data-argument="=">=</a>
+              <a data-handler="addComparisonInstruction" data-argument="&lt;">&lt;</a>
+              <a data-handler="addComparisonInstruction" data-argument="≦">≦</a>
+              <a data-handler="addComparisonInstruction" data-argument="&gt;">&gt;</a>
+              <a data-handler="addComparisonInstruction" data-argument="≧">≧</a>
+            </div>
+          </div>
+          <a data-handler="addCounterInstruction">カウンター</a>
+          <a data-handler="addNotInstruction">NOT</a>
+          <a data-handler="addAndInstruction">AND</a>
         </div>
-        <a data-handler="addCounterInstruction">カウンター</a>
-        <a data-handler="addNotInstruction">NOT</a>
-        <a data-handler="addAndInstruction">AND</a>
       </div>
-    </div>
-    <div class="menu" style="--menu-color: #F55F00;">
-      <a>モノ</a>
-      <div class="submenu">
-        <a data-handler="addObjectInstruction" data-argument="🐶">🐶 イヌ</a>
-        <a data-handler="addObjectInstruction" data-argument="😺">😺 ネコ</a>
-        <a data-handler="addObjectInstruction" data-argument="🙂">🙂 ヒト</a>
+      <div class="menu" style="--menu-color: #F55F00;">
+        <a class="topItem">モノ</a>
+        <div class="submenu">
+          <a data-handler="addObjectInstruction" data-argument="🐶">🐶 イヌ</a>
+          <a data-handler="addObjectInstruction" data-argument="😺">😺 ネコ</a>
+          <a data-handler="addObjectInstruction" data-argument="🙂">🙂 ヒト</a>
+        </div>
       </div>
+      <div class="menu topItem saveLoad" data-handler="save">保存</div>
+      <div class="menu topItem saveLoad" data-handler="load">再開</div>
     </div>
-    <div class="menu" style="--menu-color: #000000;" data-handler="play"><a>▶</a></div>
-    <div class="menu saveLoad" data-handler="save">保存</div>
-    <div class="menu saveLoad" data-handler="load">再開</div>
+    <div class="js-showWhenPlay menuBar">
+      <div class="menu topItem reedit" data-handler="reedit">🖊</div>
+      <div class="menu topItem replay" data-handler="replay">🔁</div>
+    </div>
   </div>
-  <svg class="containerElement" id="stage" xmlns="http://www.w3.org/2000/svg"></svg>
-  <button id="closeButton" onclick="stopPlaying()">X</button>
-  <verton-garage class="containerElement">
-  </verton-garage>
+  <div class="container">
+    <verton-garage class="containerElement"></verton-garage>
+    <svg class="containerElement" id="js-stage" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
   </body>
 </html>

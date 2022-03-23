@@ -6,8 +6,13 @@ const garage = document.getElementsByTagName(
   "verton-garage"
 )[0] as VertonGarage;
 
-const stageElem = document.getElementById("stage")!;
-const closeButtonElem = document.getElementById("closeButton")!;
+const stageElem = document.getElementById("js-stage")!;
+const showWhenEdit = document.getElementsByClassName(
+  "js-showWhenEdit"
+)[0] as HTMLElement;
+const showWhenPlay = document.getElementsByClassName(
+  "js-showWhenPlay"
+)[0] as HTMLElement;
 
 function invalidArgument(argument?: string): never {
   throw new Error(`Invalid argument: ${argument}`);
@@ -19,7 +24,7 @@ const COLORS = {
 };
 
 document
-  .getElementsByClassName("js-menuBar")[0]!
+  .getElementsByClassName("js-menuBars")[0]!
   .addEventListener("click", (e) => {
     const menuItem = e.target as HTMLElement;
     if (!menuItem.dataset.handler) {
@@ -121,8 +126,6 @@ document
           colors: COLORS.object,
         });
         break;
-      case "play":
-        break;
       case "save":
         // Ref. (In Japanese) https://qiita.com/kerupani129/items/99fd7a768538fcd33420
         const jsonUri = encodeURIComponent(JSON.stringify(garage.toJsObject()));
@@ -148,6 +151,18 @@ document
           };
         };
         fileInput.click();
+        break;
+      case "play":
+        stageElem.style.display = "block";
+        showWhenPlay.style.display = "block";
+        showWhenEdit.style.display = "none";
+        break;
+      case "replay":
+        break;
+      case "reedit":
+        stageElem.style.display = "none";
+        showWhenPlay.style.display = "none";
+        showWhenEdit.style.display = "block";
         break;
       default:
         throw new Error(`Unknown handler: ${menuItem.dataset.handler}`);
