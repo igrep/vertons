@@ -6,6 +6,7 @@ export type VertonGarageJsObject = {
 export type VertonVertexJsObject = {
   _id: VertexId;
   header: string;
+  kind: string;
   plugs?: PlugJsObject[];
   config?: Config;
   jacks?: JackJsObject[];
@@ -13,7 +14,13 @@ export type VertonVertexJsObject = {
   position?: Point;
 };
 
-type Config = { [key: string]: number };
+export type Config = { [key: string]: ConfigValue };
+
+export type ConfigValue = number | ConfigEnumValue;
+
+export type ConfigEnumValue = { chosen: string; candidates: ConfigEnum };
+
+export type ConfigEnum = { [id: string]: string };
 
 type Colors = {
   window: string;
@@ -123,7 +130,7 @@ export class VertonGarage extends HTMLElement {
     const specFilled = Object.assign(
       {
         plugs: [],
-        config: [],
+        config: {},
         jacks: [],
         colors: {},
         position: this._searchPosition(),
@@ -685,10 +692,15 @@ export class VertonVertex extends HTMLElement {
         flex-direction: column;
         justify-content: space-around;
       }
-      .config {
+      input.config {
         display: block;
-        font-size: 1.4em;
+        font-size: 140%;
         width: calc(var(--width) * 0.4);
+      }
+      select.config {
+        display: block;
+        font-size: 80%;
+        width: calc(var(--width) * 0.87);
       }
     `;
     shadow.appendChild(style);
@@ -1014,24 +1026,36 @@ export class VertonVertex extends HTMLElement {
   }
 
   private static _appendConfigInputs(
-    configContents: { [key: string]: number },
+    configContents: Config,
     container: HTMLElement
   ) {
     const div = document.createElement("div");
     div.id = "Config-container"; // Capitalize the id to avoid name conflicts.
     for (const [key, value] of Object.entries(configContents)) {
-      const input = document.createElement("input");
-      input.setAttribute("type", "number");
-      input.setAttribute("value", value.toString());
-      input.id = `config-${VertonVertex.validateId(key)}`;
-      input.classList.add("config");
+      let configElem;
+      if (typeof value === "number") {
+        configElem = document.createElement("input");
+        configElem.setAttribute("type", "number");
+        configElem.setAttribute("value", value.toString());
+      } else {
+        configElem = document.createElement("select");
+        const { chosen, candidates } = value;
+        for (const [enumId, enumLabel] of Object.entries(candidates)) {
+          const optElem = document.createElement("option");
+          optElem.value = enumId;
+          optElem.innerText = enumLabel;
+          optElem.selected = enumId === chosen;
+          configElem.appendChild(optElem);
+        }
+      }
 
+      configElem.id = `config-${VertonVertex.validateId(key)}`;
+      configElem.classList.add("config");
       // Prevent the parent vertex from taking focus by setPointerCapture
-      input.addEventListener("pointerdown", (e) => {
+      configElem.addEventListener("pointerdown", (e) => {
         e.stopPropagation();
       });
-
-      div.appendChild(input);
+      div.appendChild(configElem);
     }
     container.appendChild(div);
   }
@@ -1049,9 +1073,29 @@ export class VertonVertex extends HTMLElement {
     const config: Config = {};
     const configElems = this.shadowRoot!.querySelectorAll(".config");
     for (let i = 0; i < configElems.length; ++i) {
-      const configElem = configElems[i] as HTMLInputElement;
-      const key = configElem.id.slice(CONFIG_ID_PREFIX.length);
-      config[key] = Number(configElem.value);
+      const configElem = configElems[i];
+      let key;
+      switch (configElem.nodeName.toUpperCase()) {
+        case "SELECT":
+          const configSelect = configElem as HTMLSelectElement;
+          key = configSelect.id.slice(CONFIG_ID_PREFIX.length);
+          const configEnum: ConfigEnum = {};
+          const opts = configSelect.options;
+          for (let i = 0; i < opts.length; ++i) {
+            const opt = opts[i];
+            configEnum[opt.value] = opt.innerText;
+          }
+          config[key] = {
+            chosen: configSelect.value,
+            candidates: configEnum,
+          };
+          break;
+        case "INPUT":
+          const configInput = configElem as HTMLInputElement;
+          key = configInput.id.slice(CONFIG_ID_PREFIX.length);
+          config[key] = Number(configInput.value);
+          break;
+      }
     }
 
     const position = this.getPosition();

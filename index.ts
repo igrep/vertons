@@ -1,3 +1,4 @@
+import { evaluate } from "./eval";
 import { VertonGarage, activateWebComponents } from "./lib";
 
 activateWebComponents();
@@ -23,6 +24,7 @@ const COLORS = {
   object: { window: "#FF7A26" },
 };
 
+let cleanup: undefined | ReturnType<typeof evaluate>;
 document
   .getElementsByClassName("js-menuBars")[0]!
   .addEventListener("click", (e) => {
@@ -35,15 +37,27 @@ document
       case "addClickInstruction":
         garage.addVertex({
           header: "クリック",
+          kind: "click",
           plugs: [
             { label: "X座標", plugId: "x" },
             { label: "Y座標", plugId: "y" },
           ],
+          config: {
+            send: {
+              chosen: "justWhenClicked",
+              candidates: {
+                justWhenClicked: "クリックした瞬間だけ",
+                whilePointerDown: "ボタンを押している間ずっと",
+                lastPosition: "ボタンを放した後もずっと",
+              },
+            },
+          },
         });
         break;
       case "addConstInstruction":
         garage.addVertex({
           header: "定数",
+          kind: "constant",
           plugs: [{ label: "値", plugId: "value" }],
           config: { value: 0 },
         });
@@ -51,6 +65,7 @@ document
       case "addTimeInstruction":
         garage.addVertex({
           header: "経過時間",
+          kind: "time",
           plugs: [{ label: "値", plugId: "value" }],
         });
         break;
@@ -60,6 +75,7 @@ document
           invalidArgument(menuItem.dataset.argument);
         garage.addVertex({
           header: "けいさん",
+          kind: "calculate",
           jacks: [{ jackId: "left" }, { label: operator }, { jackId: "right" }],
           plugs: [{ label: "=" }, { plugId: "result" }],
           colors: COLORS.intermediate,
@@ -71,6 +87,7 @@ document
           invalidArgument(menuItem.dataset.argument);
         garage.addVertex({
           header: "くらべる",
+          kind: "compare",
           jacks: [
             { jackId: "left" },
             { label: comparator },
@@ -83,6 +100,7 @@ document
       case "addCounterInstruction":
         garage.addVertex({
           header: "カウンター",
+          kind: "counter",
           jacks: [
             { jackId: "increment", label: "増やす" },
             { jackId: "decrement", label: "減らす" },
@@ -95,6 +113,7 @@ document
       case "addNotInstruction":
         garage.addVertex({
           header: "NOT",
+          kind: "not",
           jacks: [{ jackId: "input", label: "入力" }],
           plugs: [{ plugId: "output", label: "出力" }],
           colors: COLORS.intermediate,
@@ -103,6 +122,7 @@ document
       case "addAndInstruction":
         garage.addVertex({
           header: "AND",
+          kind: "and",
           jacks: [
             { jackId: "left", label: "入力1" },
             { jackId: "right", label: "入力1" },
@@ -117,6 +137,7 @@ document
           invalidArgument(menuItem.dataset.argument);
         garage.addVertex({
           header: object,
+          kind: "object",
           jacks: [
             { label: "X座標" },
             { jackId: "x" },
@@ -156,13 +177,18 @@ document
         stageElem.style.display = "block";
         showWhenPlay.style.display = "block";
         showWhenEdit.style.display = "none";
+        cleanup = evaluate(garage.toJsObject(), stageElem);
         break;
       case "replay":
+        cleanup?.();
+        cleanup = evaluate(garage.toJsObject(), stageElem);
         break;
       case "reedit":
         stageElem.style.display = "none";
         showWhenPlay.style.display = "none";
         showWhenEdit.style.display = "block";
+        cleanup?.();
+        cleanup = undefined;
         break;
       default:
         throw new Error(`Unknown handler: ${menuItem.dataset.handler}`);

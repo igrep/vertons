@@ -158,6 +158,7 @@ describe("VertonGarage#toJsObject/#loadJsObject", () => {
             record({
               _id: fc.constant(id),
               header: fc.constant(`<Vertex#${id}>`),
+              kind: fc.constant(""),
               plugs: array(
                 fc.oneof(
                   fc.record({ label: fc.constant('<plug label"') }),
