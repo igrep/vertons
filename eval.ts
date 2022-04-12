@@ -236,9 +236,11 @@ namespace Graph {
   ): Graph {
     const graph: Graph = [];
     for (const { from, to } of edges) {
-      const { plugs, jacks } = idOrdered[from.vertexId];
+      const { plugs } = idOrdered[from.vertexId];
       const plugNumber = (plugs as Record<string, PlugNumber>)[from.plugId];
       graph[plugNumber] ||= [];
+
+      const { jacks } = idOrdered[to.vertexId];
       const jackNumber = (jacks as Record<string, JackNumber>)[to.jackId];
       graph[plugNumber].push(jackNumber);
     }
