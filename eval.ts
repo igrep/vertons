@@ -296,8 +296,10 @@ export function evaluate(
         break;
     }
   }
+
   stage.addEventListener("click", handleClick);
-  stage.addEventListener("mousemove", handleMouseMove);
+  stage.addEventListener("mousedown", handleMouseDownMove);
+  stage.addEventListener("mousemove", handleMouseDownMove);
   stage.addEventListener("mouseup", handleMouseUp);
   function handleClick(e: MouseEvent) {
     const { x, y } = stage.getBoundingClientRect();
@@ -306,7 +308,7 @@ export function evaluate(
       plugState[vertex.plugs.y] = e.clientY - y;
     }
   }
-  function handleMouseMove(e: MouseEvent) {
+  function handleMouseDownMove(e: MouseEvent) {
     if (e.buttons === 0) {
       return;
     }
@@ -333,7 +335,7 @@ export function evaluate(
   return () => {
     runState.shouldStop = true;
     stage.removeEventListener("click", handleClick);
-    stage.removeEventListener("mousemove", handleMouseMove);
+    stage.removeEventListener("mousemove", handleMouseDownMove);
     stage.removeEventListener("mouseup", handleMouseUp);
     stage.innerHTML = "";
   };
