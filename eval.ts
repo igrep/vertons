@@ -281,11 +281,14 @@ export function evaluate(
         plugState[vertex.plugs.value] = vertex.config.value;
         break;
       case "object":
-        const element = document.createElement("text");
+        const element = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text"
+        );
         element.setAttribute("x", "-100");
         element.setAttribute("y", "-100");
         element.setAttribute("id", `js-object-${vertex._id}`);
-        element.innerText = vertex.header;
+        element.textContent = vertex.header;
         stage.appendChild(element);
         break;
       default:
