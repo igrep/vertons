@@ -154,7 +154,6 @@ document
         a.href = `data:application/json;charset=utf-8,${jsonUri}`;
         a.download = "vertons.json";
         a.style.display = "none";
-        console.log("SAVE");
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
