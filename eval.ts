@@ -56,6 +56,7 @@ type VertexForEvaluation =
   | (VertexCore & {
       kind: "object";
       jacks: { x: JackNumber; y: JackNumber };
+      config: { initialX: number; initialY: number };
     });
 
 type ClickVertexes = {
@@ -210,6 +211,7 @@ function vertexesForEvaluation(
           header: v.header,
           jacks: { x: jackId++, y: jackId++ },
           plugs: {},
+          config: { initialX: v.position.x, initialY: v.position.y },
         };
         break;
       default:
@@ -285,8 +287,8 @@ export function evaluate(
           "http://www.w3.org/2000/svg",
           "text"
         );
-        element.setAttribute("x", "-100");
-        element.setAttribute("y", "-100");
+        element.setAttribute("x", vertex.config.initialX.toString());
+        element.setAttribute("y", vertex.config.initialY.toString());
         element.setAttribute("id", `js-object-${vertex._id}`);
         element.textContent = vertex.header;
         stage.appendChild(element);
@@ -434,8 +436,10 @@ function doEvaluate(
           jackVal1 = getJackValue(vertex.jacks.x, graph, plugState);
           jackVal2 = getJackValue(vertex.jacks.y, graph, plugState);
           const objectElem = stage.querySelector(`#js-object-${vertex._id}`)!;
-          objectElem.setAttribute("x", jackVal1.toString());
-          objectElem.setAttribute("y", jackVal2.toString());
+          const x = Number(objectElem.getAttribute("x"));
+          const y = Number(objectElem.getAttribute("y"));
+          objectElem.setAttribute("x", (x + jackVal1).toString());
+          objectElem.setAttribute("y", (y + jackVal2).toString());
           break;
       }
     }

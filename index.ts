@@ -139,9 +139,9 @@ document
           header: object,
           kind: "object",
           jacks: [
-            { label: "X座標" },
+            { label: "X方向への移動" },
             { jackId: "x" },
-            { label: "Y座標" },
+            { label: "Y方向への移動" },
             { jackId: "y" },
           ],
           colors: COLORS.object,
