@@ -487,7 +487,10 @@ function getJackValue(
   graph: Graph,
   plugState: PlugState
 ): number {
-  return graph[jack].reduce((a, b) => plugState[a] + plugState[b], 0);
+  return graph[jack].reduce(
+    (jackVal, plugNumber) => jackVal + plugState[plugNumber],
+    0
+  );
 }
 
 function validateConfigCursor(
