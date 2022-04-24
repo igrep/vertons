@@ -17,6 +17,7 @@ type VertexCore = {
 
 type VertexForEvaluation =
   | ClickVertexForEvaluation
+  | CursorVertexForEvaluation
   | (VertexCore & {
       kind: "constant";
       plugs: { value: PlugNumber };
@@ -59,35 +60,32 @@ type VertexForEvaluation =
       config: { initialX: number; initialY: number };
     });
 
-type ClickVertexes = {
-  justWhenClicked: ClickVertexJustWhenClicked[];
-  whilePointerDown: ClickVertexWhilePointerDown[];
-  lastPosition: ClickVertexLastPosition[];
+type MouseVertexes = {
+  click: ClickVertexForEvaluation[];
+  whilePointerDown: CursorVertexWhilePointerDown[];
+  lastPosition: CursorVertexLastPosition[];
 };
 
-type ClickVertexConfigValue =
-  | "justWhenClicked"
-  | "whilePointerDown"
-  | "lastPosition";
-type ClickVertexForEvaluationCore = VertexCore & {
+type ClickVertexForEvaluation = VertexCore & {
   kind: "click";
+  plugs: { clicked: PlugNumber };
+};
+
+type CursorVertexConfigValue = "whilePointerDown" | "lastPosition";
+type CursorVertexForEvaluationCore = VertexCore & {
+  kind: "cursor";
   plugs: { x: PlugNumber; y: PlugNumber };
-  config: { send: ClickVertexConfigValue };
+  config: { send: CursorVertexConfigValue };
 };
-type ClickVertexForEvaluation =
-  | ClickVertexJustWhenClicked
-  | ClickVertexWhilePointerDown
-  | ClickVertexLastPosition;
-// onclick
-type ClickVertexJustWhenClicked = ClickVertexForEvaluationCore & {
-  config: { send: "justWhenClicked" };
-};
-// onmousemove (with mousedown) & onmouseup
-type ClickVertexWhilePointerDown = ClickVertexForEvaluationCore & {
+type CursorVertexForEvaluation =
+  | CursorVertexWhilePointerDown
+  | CursorVertexLastPosition;
+// onmousemove (with pointerdown) & onmouseup
+type CursorVertexWhilePointerDown = CursorVertexForEvaluationCore & {
   config: { send: "whilePointerDown" };
 };
-// onmousemove (with mousedown)
-type ClickVertexLastPosition = ClickVertexForEvaluationCore & {
+// onmousemove (with pointerdown)
+type CursorVertexLastPosition = CursorVertexForEvaluationCore & {
   config: { send: "lastPosition" };
 };
 
@@ -95,8 +93,9 @@ function vertexesForEvaluation(
   vertexes: Required<VertonVertexJsObject>[]
 ): {
   plugsCount: number;
+  jacksCount: number;
   plugJackOrdered: VertexForEvaluation[];
-  clickVertexes: ClickVertexes;
+  mouseVertexes: MouseVertexes;
   idOrdered: VertexForEvaluation[];
 } {
   const vertexes0 = [...vertexes];
@@ -113,8 +112,11 @@ function vertexesForEvaluation(
 
   const plugJackOrdered: VertexForEvaluation[] = [];
   const idOrdered: VertexForEvaluation[] = [];
-  const clickVertexes: Record<string, ClickVertexForEvaluation[]> = {
-    justWhenClicked: [],
+  const mouseVertexes: Record<
+    string,
+    (CursorVertexForEvaluation | ClickVertexForEvaluation)[]
+  > = {
+    click: [],
     whilePointerDown: [],
     lastPosition: [],
   };
@@ -124,16 +126,26 @@ function vertexesForEvaluation(
     let v1: VertexForEvaluation;
     switch (v.kind) {
       case "click":
-        const configClick = validateConfigClick(v);
+        v1 = {
+          _id: v._id,
+          kind: v.kind,
+          header: v.header,
+          plugs: { clicked: plugId++ },
+          jacks: {},
+        };
+        mouseVertexes["click"].push(v1);
+        break;
+      case "cursor":
+        const configCursor = validateConfigCursor(v);
         v1 = {
           _id: v._id,
           kind: v.kind,
           header: v.header,
           plugs: { x: plugId++, y: plugId++ },
-          config: { send: configClick },
+          config: { send: configCursor },
           jacks: {},
-        } as ClickVertexForEvaluation;
-        clickVertexes[configClick].push(v1);
+        } as CursorVertexForEvaluation;
+        mouseVertexes[configCursor].push(v1);
         break;
       case "constant":
         if (!("value" in v.config)) {
@@ -222,9 +234,10 @@ function vertexesForEvaluation(
   }
   return {
     plugsCount: plugId,
+    jacksCount: jackId,
     plugJackOrdered,
     idOrdered,
-    clickVertexes: clickVertexes as ClickVertexes,
+    mouseVertexes: mouseVertexes as MouseVertexes,
   };
 }
 
@@ -234,17 +247,24 @@ type Graph = PlugNumber[][];
 namespace Graph {
   export function build(
     edges: Edge.JsObject[],
-    idOrdered: VertexForEvaluation[]
+    idOrdered: VertexForEvaluation[],
+    jacksCount: number
   ): Graph {
-    const graph: Graph = [];
-    for (const { from, to } of edges) {
-      const { plugs } = idOrdered[from.vertexId];
-      const plugNumber = (plugs as Record<string, PlugNumber>)[from.plugId];
-      graph[plugNumber] ||= [];
+    const graph: Graph = new Array(jacksCount);
+    for (let jackNumber = 0; jackNumber < graph.length; ++jackNumber) {
+      graph[jackNumber] = [];
+    }
 
+    for (const { from, to } of edges) {
       const { jacks } = idOrdered[to.vertexId];
       const jackNumber = (jacks as Record<string, JackNumber>)[to.jackId];
-      graph[plugNumber].push(jackNumber);
+
+      const { plugs } = idOrdered[from.vertexId];
+      const plugNumber = (plugs as Record<string, PlugNumber>)[from.plugId];
+      if (plugNumber === undefined || jackNumber === undefined) {
+        console.error("Invalid edge: ", { from, to });
+      }
+      graph[jackNumber].push(plugNumber);
     }
     return graph;
   }
@@ -269,11 +289,12 @@ export function evaluate(
 ): Stop {
   const {
     plugsCount,
+    jacksCount,
     plugJackOrdered,
     idOrdered,
-    clickVertexes,
+    mouseVertexes,
   } = vertexesForEvaluation(vertexes);
-  const graph = Graph.build(edges, idOrdered);
+  const graph = Graph.build(edges, idOrdered, jacksCount);
   const plugState = PlugState.init(plugsCount);
 
   // beforeEvaluate {
@@ -300,45 +321,41 @@ export function evaluate(
   }
 
   stage.addEventListener("click", handleClick);
-  stage.addEventListener("mousedown", handleMouseDownMove);
-  stage.addEventListener("mousemove", handleMouseDownMove);
-  stage.addEventListener("mouseup", handleMouseUp);
-  function handleClick(e: MouseEvent) {
-    const { x, y } = stage.getBoundingClientRect();
-    for (const vertex of clickVertexes.justWhenClicked) {
-      plugState[vertex.plugs.x] = e.clientX - x;
-      plugState[vertex.plugs.y] = e.clientY - y;
+  stage.addEventListener("pointerdown", handlePointerDownMove);
+  stage.addEventListener("pointermove", handlePointerDownMove);
+  function handleClick() {
+    for (const vertex of mouseVertexes.click) {
+      plugState[vertex.plugs.clicked] = 1;
     }
   }
-  function handleMouseDownMove(e: MouseEvent) {
-    if (e.buttons === 0) {
-      return;
+
+  const rect = stage.getBoundingClientRect();
+  let lastX = rect.left;
+  let lastY = rect.top;
+  function handlePointerDownMove(e: MouseEvent) {
+    for (const vertex of mouseVertexes.lastPosition) {
+      plugState[vertex.plugs.x] = e.clientX - lastX;
+      plugState[vertex.plugs.y] = e.clientY - lastY;
     }
-    const { x, y } = stage.getBoundingClientRect();
-    for (const vertex of clickVertexes.whilePointerDown) {
-      plugState[vertex.plugs.x] = e.clientX - x;
-      plugState[vertex.plugs.y] = e.clientY - y;
+
+    if (e.buttons !== 0) {
+      for (const vertex of mouseVertexes.whilePointerDown) {
+        plugState[vertex.plugs.x] = e.clientX - lastX;
+        plugState[vertex.plugs.y] = e.clientY - lastY;
+      }
     }
-    for (const vertex of clickVertexes.lastPosition) {
-      plugState[vertex.plugs.x] = e.clientX - x;
-      plugState[vertex.plugs.y] = e.clientY - y;
-    }
-  }
-  function handleMouseUp() {
-    for (const vertex of clickVertexes.whilePointerDown) {
-      plugState[vertex.plugs.x] = 0;
-      plugState[vertex.plugs.y] = 0;
-    }
+    lastX = e.clientX;
+    lastY = e.clientY;
   }
   // }
 
   const runState = { shouldStop: false };
-  doEvaluate(plugJackOrdered, graph, clickVertexes, plugState, runState, stage);
+  doEvaluate(plugJackOrdered, graph, mouseVertexes, plugState, runState, stage);
   return () => {
     runState.shouldStop = true;
     stage.removeEventListener("click", handleClick);
-    stage.removeEventListener("mousemove", handleMouseDownMove);
-    stage.removeEventListener("mouseup", handleMouseUp);
+    stage.removeEventListener("pointermove", handlePointerDownMove);
+    stage.removeEventListener("pointerdown", handlePointerDownMove);
     stage.innerHTML = "";
   };
 }
@@ -346,7 +363,7 @@ export function evaluate(
 function doEvaluate(
   plugJackOrdered: VertexForEvaluation[],
   graph: Graph,
-  { justWhenClicked }: ClickVertexes,
+  { click, whilePointerDown, lastPosition }: MouseVertexes,
   plugState: PlugState,
   runState: RunState,
   stage: HTMLElement
@@ -444,8 +461,15 @@ function doEvaluate(
       }
     }
 
-    for (const vertex of justWhenClicked) {
-      // reset the state of `justWhenClicked` click vertexes
+    // reset the state of mouse related vertexes
+    for (const vertex of click) {
+      plugState[vertex.plugs.clicked] = 0;
+    }
+    for (const vertex of whilePointerDown) {
+      plugState[vertex.plugs.x] = 0;
+      plugState[vertex.plugs.y] = 0;
+    }
+    for (const vertex of lastPosition) {
       plugState[vertex.plugs.x] = 0;
       plugState[vertex.plugs.y] = 0;
     }
@@ -466,14 +490,13 @@ function getJackValue(
   return graph[jack].reduce((a, b) => plugState[a] + plugState[b], 0);
 }
 
-function validateConfigClick(
+function validateConfigCursor(
   v: Required<VertonVertexJsObject>
-): ClickVertexConfigValue {
+): CursorVertexConfigValue {
   if (!(v.config.send instanceof Object)) {
     throw new Error(`Invalid config for a click vertex: ${v.config.send}`);
   }
   switch (v.config.send.chosen) {
-    case "justWhenClicked":
     case "whilePointerDown":
     case "lastPosition":
       return v.config.send.chosen;

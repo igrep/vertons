@@ -38,17 +38,24 @@ document
         garage.addVertex({
           header: "クリック",
           kind: "click",
+          plugs: [{ plugId: "clicked" }],
+          config: {},
+        });
+        break;
+      case "addCursorInstruction":
+        garage.addVertex({
+          header: "マウスの移動",
+          kind: "cursor",
           plugs: [
-            { label: "X座標", plugId: "x" },
-            { label: "Y座標", plugId: "y" },
+            { label: "X方向", plugId: "x" },
+            { label: "Y方向", plugId: "y" },
           ],
           config: {
             send: {
-              chosen: "justWhenClicked",
+              chosen: "whilePointerDown",
               candidates: {
-                justWhenClicked: "クリックした瞬間だけ",
-                whilePointerDown: "ボタンを押している間ずっと",
-                lastPosition: "ボタンを放した後もずっと",
+                whilePointerDown: "ボタンを押している間だけ",
+                lastPosition: "ボタンを押していなくても",
               },
             },
           },
