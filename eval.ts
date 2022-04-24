@@ -24,7 +24,7 @@ type VertexForEvaluation =
       config: { value: number };
     })
   | (VertexCore & {
-      kind: "time";
+      kind: "tick";
       plugs: { value: PlugNumber };
     })
   | (VertexCore & {
@@ -160,7 +160,7 @@ function vertexesForEvaluation(
           jacks: {},
         };
         break;
-      case "time":
+      case "tick":
         v1 = {
           _id: v._id,
           kind: v.kind,
@@ -369,13 +369,14 @@ function doEvaluate(
   stage: HTMLElement
 ) {
   requestAnimationFrame(go);
-  let start: number | undefined = undefined;
+  let lastTime: number | undefined = undefined;
   function go(time: number) {
     if (runState.shouldStop) {
       return;
     }
-    start ??= time;
-    const elapsed = time - start;
+    lastTime ??= time;
+    const elapsed = time - lastTime;
+    lastTime = time;
 
     let jackVal1: number, jackVal2: number;
     for (const vertex of plugJackOrdered) {
@@ -387,7 +388,7 @@ function doEvaluate(
         case "constant":
           // do nothing. The result of constant is set by beforeEvaluate().
           break;
-        case "time":
+        case "tick":
           plugState[vertex.plugs.value] = elapsed;
           break;
         case "calculate":

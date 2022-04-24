@@ -69,10 +69,10 @@ document
           config: { value: 0 },
         });
         break;
-      case "addTimeInstruction":
+      case "addTickInstruction":
         garage.addVertex({
-          header: "経過時間",
-          kind: "time",
+          header: "時間の経過",
+          kind: "tick",
           plugs: [{ label: "値", plugId: "value" }],
         });
         break;
