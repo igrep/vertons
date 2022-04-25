@@ -735,14 +735,8 @@ export class VertonVertex extends HTMLElement {
       width: garageWidth,
       height: garageHeight,
     } = this._garage!.getBoundingClientRect();
-    const newLeftClamped = Math.min(
-      Math.max(newLeft, 0),
-      garageWidth - rect.width
-    );
-    const newTopClamped = Math.min(
-      Math.max(newTop, 0),
-      garageHeight - rect.height
-    );
+    const newLeftClamped = Math.min(Math.max(newLeft, 0), garageWidth);
+    const newTopClamped = Math.min(Math.max(newTop, 0), garageHeight);
 
     this._setX(newLeftClamped);
     this._setY(newTopClamped);
