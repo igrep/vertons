@@ -198,15 +198,13 @@ export class VertonGarage extends HTMLElement {
 
   toJsObject(): VertonGarageJsObject {
     const vertexes: Required<VertonVertexJsObject>[] = [];
-    const vertexElems = this._getVertexesContainer().getElementsByTagName(
-      "verton-vertex"
-    ) as HTMLCollectionOf<VertonVertex>;
+    const vertexElems = this._collectVertexElements();
     for (let i = 0; i < vertexElems.length; ++i) {
       vertexes.push(vertexElems[i].toJsObject());
     }
 
     const edges: Edge.JsObject[] = [];
-    const edgeElems = this._getEdgesContainer().children;
+    const edgeElems = this._collectEdgeElements();
     for (let i = 0; i < edgeElems.length; ++i) {
       edges.push(Edge.toJsObject(edgeElems[i] as Edge.Type));
     }
@@ -214,7 +212,8 @@ export class VertonGarage extends HTMLElement {
   }
 
   loadJsObject({ vertexes, edges }: VertonGarageJsObject) {
-    let maxVertexId = this._lastVertexId;
+    this._clearVertexesAndEdges();
+    let maxVertexId = 0;
     for (const vertex of vertexes) {
       this._getVertexesContainer().append(VertonVertex.build(vertex, this));
       if (vertex._id > maxVertexId) {
@@ -257,6 +256,25 @@ export class VertonGarage extends HTMLElement {
     };
   }
 
+  private _collectVertexElements(): HTMLCollectionOf<VertonVertex> {
+    return this._getVertexesContainer().getElementsByTagName(
+      "verton-vertex"
+    ) as HTMLCollectionOf<VertonVertex>;
+  }
+
+  private _collectEdgeElements(): HTMLCollectionOf<Edge.Type> {
+    return this._getEdgesContainer().getElementsByClassName(
+      "edge"
+    ) as HTMLCollectionOf<Edge.Type>;
+  }
+
+  isEmpty(): boolean {
+    return (
+      this._collectVertexElements().length < 1 &&
+      this._collectEdgeElements().length < 1
+    );
+  }
+
   private _searchPosition(): Point {
     const points: Point[] = [];
     const vertexElems = this._getVertexesContainer().getElementsByTagName(
@@ -286,6 +304,11 @@ export class VertonGarage extends HTMLElement {
 
   private _getEdgesContainer(): HTMLElement {
     return this.shadowRoot!.getElementById("edges")!;
+  }
+
+  private _clearVertexesAndEdges() {
+    this._getVertexesContainer().innerHTML = "";
+    this._getEdgesContainer().innerHTML = "";
   }
 
   static findNonOverlappingPoint(

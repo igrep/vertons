@@ -166,6 +166,15 @@ document
         document.body.removeChild(a);
         break;
       case "load":
+        if (!garage.isEmpty()) {
+          const loadAnyway = confirm(
+            "保存したファイルから再開すると、今あるノードは削除されていまいます。それでも再開しますか？"
+          );
+          if (!loadAnyway) {
+            return;
+          }
+        }
+
         // Ref. (In Japanese) https://qiita.com/kerupani129/items/99fd7a768538fcd33420
         const fileInput = document.createElement("input");
         fileInput.type = "file";
