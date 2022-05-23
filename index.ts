@@ -110,7 +110,6 @@ document
           kind: "counter",
           jacks: [
             { jackId: "increment", label: "増やす" },
-            { jackId: "decrement", label: "減らす" },
             { jackId: "reset", label: "リセット" },
           ],
           plugs: [{ label: "カウント" }, { plugId: "count" }],
