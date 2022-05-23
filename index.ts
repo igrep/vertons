@@ -131,7 +131,7 @@ document
           kind: "and",
           jacks: [
             { jackId: "left", label: "入力1" },
-            { jackId: "right", label: "入力1" },
+            { jackId: "right", label: "入力2" },
           ],
           plugs: [{ plugId: "output", label: "出力" }],
           colors: COLORS.intermediate,
