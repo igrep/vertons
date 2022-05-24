@@ -108,10 +108,7 @@ document
         garage.addVertex({
           header: "カウンター",
           kind: "counter",
-          jacks: [
-            { jackId: "increment", label: "増やす" },
-            { jackId: "reset", label: "リセット" },
-          ],
+          jacks: [{ jackId: "increment", label: "増やす" }],
           plugs: [{ label: "カウント" }, { plugId: "count" }],
           colors: COLORS.intermediate,
         });
