@@ -4,6 +4,7 @@ import {
   VertexId,
   Edge,
 } from "./lib";
+import { topologicalSort } from "./topological-sort";
 
 type PlugNumber = number;
 type JackNumber = number;
@@ -90,7 +91,8 @@ type CursorVertexLastPosition = CursorVertexForEvaluationCore & {
 };
 
 function vertexesForEvaluation(
-  vertexes: Required<VertonVertexJsObject>[]
+  vertexes: Required<VertonVertexJsObject>[],
+  edges: Edge.JsObject[]
 ): {
   plugsCount: number;
   jacksCount: number;
@@ -98,16 +100,18 @@ function vertexesForEvaluation(
   mouseVertexes: MouseVertexes;
   idOrdered: VertexForEvaluation[];
 } {
-  const vertexes0 = [...vertexes];
-  vertexes0.sort((a, b) => weight(a) - weight(b) || a._id - b._id);
-  function weight({ plugs, jacks }: Required<VertonVertexJsObject>): number {
-    if (plugs.length) {
-      if (jacks.length) {
-        return 0; // has both
-      }
-      return -1; // has only plugs
-    }
-    return 1; // has only jacks. (All vertexes have at least either!)
+  const vertexesById: Required<VertonVertexJsObject>[] = [];
+  for (const vertex of vertexes) {
+    vertexesById[vertex._id] = vertex;
+  }
+
+  const sortedIds = topologicalSort<{ vertexId: VertexId }>(
+    edges,
+    (edge) => edge.vertexId
+  );
+  const sortedVertexes: Required<VertonVertexJsObject>[] = [];
+  for (const id of sortedIds) {
+    sortedVertexes.push(vertexesById[id]);
   }
 
   const plugJackOrdered: VertexForEvaluation[] = [];
@@ -122,7 +126,7 @@ function vertexesForEvaluation(
   };
   let plugId = 0;
   let jackId = 0;
-  for (const v of vertexes0) {
+  for (const v of sortedVertexes) {
     let v1: VertexForEvaluation;
     switch (v.kind) {
       case "click":
@@ -293,7 +297,7 @@ export function evaluate(
     plugJackOrdered,
     idOrdered,
     mouseVertexes,
-  } = vertexesForEvaluation(vertexes);
+  } = vertexesForEvaluation(vertexes, edges);
   const graph = Graph.build(edges, idOrdered, jacksCount);
   const plugState = PlugState.init(plugsCount);
 
