@@ -428,6 +428,7 @@ function doEvaluate(
               plugState[vertex.plugs.result] = boolVal(jackVal1 < jackVal2);
               break;
             case "≦":
+              plugState[vertex.plugs.result] = boolVal(jackVal1 <= jackVal2);
               break;
             case ">":
               plugState[vertex.plugs.result] = boolVal(jackVal1 > jackVal2);
