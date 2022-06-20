@@ -3,8 +3,8 @@ import {
   VertonGarageJsObject,
   VertexId,
   Edge,
-} from "./lib";
-import { topologicalSort } from "./topological-sort";
+} from "./lib.js";
+import { topologicalSort } from "./topological-sort.js";
 
 type PlugNumber = number;
 type JackNumber = number;

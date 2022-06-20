@@ -1,5 +1,5 @@
-import { evaluate } from "./eval";
-import { VertonGarage, activateWebComponents } from "./lib";
+import { evaluate } from "./eval.js";
+import { VertonGarage, activateWebComponents } from "./lib.js";
 
 activateWebComponents();
 
