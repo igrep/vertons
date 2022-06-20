@@ -1,14 +1,14 @@
 {
-  "name": "web-components-verton",
+  "name": "vertons",
   "version": "0.1.0",
-  "description": "Web Component library inspired by Nintendo's \"ナビつき！ つくってわかる はじめてゲームプログラミング\".",
+  "description": "任天堂の \"ナビつき！ つくってわかる はじめてゲームプログラミング\" 風の何か",
   "main": "index.js",
   "scripts": {
     "test": "jest"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/igrep/web-components-verton.git"
+    "url": "git+https://github.com/igrep/vertons.git"
   },
   "keywords": [
     "WebComponents",
