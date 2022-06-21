@@ -205,3 +205,17 @@ document
         throw new Error(`Unknown handler: ${menuItem.dataset.handler}`);
     }
   });
+
+async function loadInitialVertexesFile() {
+  const TEST_VERTEXES_DIR = "test-vertexes";
+  const vertexesName = location.search.substr(1); // Drop the first question sign.
+  if (/^[-0-9,a-zA-Z]+\.json$/.test(vertexesName)){
+    const res = await fetch(`${TEST_VERTEXES_DIR}/${vertexesName}`);
+    garage.loadJsObject(await res.json());
+  } else {
+    if (vertexesName) {
+      console.error(`Invalid name of the initial vertexes file: ${vertexesName}`);
+    }
+  }
+}
+loadInitialVertexesFile();
