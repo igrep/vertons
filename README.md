@@ -4,7 +4,7 @@
 
 <https://the.igreque.info/works/vertons/>
 
-![screenshot](first-screenshot.png)
+![Demo](imgs/demo.webp)
 
 ## テスト用に作ったサンプルアプリ
 
