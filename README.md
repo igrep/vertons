@@ -4,7 +4,10 @@
 
 <https://the.igreque.info/works/vertons/>
 
-![Demo](imgs/demo.webp)
+<picture>
+<source srcset="imgs/demo.webp" type="image/webp"/>
+<img src="imgs/demo.gif"/>
+</picture>
 
 ## テスト用に作ったサンプルアプリ
 
